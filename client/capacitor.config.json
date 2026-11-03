@@ -1,0 +1,9 @@
+﻿{
+  "appId": "com.shopeasy.mertaroad",
+  "appName": "ShopEasy",
+  "webDir": "dist",
+  "server": {
+    "url": "http://10.122.200.218:5173",
+    "cleartext": true
+  }
+}

@@ -1,0 +1,89 @@
+﻿# Dependencies
+node_modules/
+**/node_modules/
+
+# Build output
+dist/
+**/dist/
+client/dist/
+
+# Environment variables and secrets
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
+
+# SQLite databases and temporary files
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Uploaded files (keep directory placeholder)
+server/uploads/*
+!server/uploads/.gitkeep
+
+# Capacitor generated platforms
+client/android/
+client/ios/
+
+# Backups (all root folders containing "backup", case-insensitive)
+/*[bB][aA][cC][kK][uU][pP]*/
+
+# Local backup and diagnostic files
+/*.txt
+/*.zip
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.vscode/
+
+# Backup directories and files at any depth
+**/*[bB][aA][cC][kK][uU][pP]*/
+**/*.bak
+**/*.bak.*
+**/*.backup
+**/*.backup-*
+**/*.before-*
+**/*.disabled
+
+# Temporary reports and diagnostic files
+**/*.txt
+**/*.zip
+
+# Temporary cart fix copies
+/FINAL-CART-FIX-*/
+
+# Never upload environment templates or local environment files yet
+**/.env*
+
+# All backup naming variations
+**/*[bB][aA][cC][kK][uU][pP]*
+**/*.bak*
+**/*.before_*
+**/*.before-*
+**/*.disabled
+**/*-backup*
+**/*_backup*
+
+# SQLite database files including old database copies
+server/data.db*
+**/*.db
+**/*.db-shm
+**/*.db-wal
+
+# Capacitor backup configurations
+client/capacitor*.backup*
+client/capacitor*.disabled
+client/capacitor-*-backup/
+
+# Local scripts used only for database inspection or patching
+/server/inspect-and-backup.mjs
+/server/check-products.cjs
+/server/patch-earnings.cjs
+/server/auto-images.py
+/patch-delivery.cjs
