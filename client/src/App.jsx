@@ -1196,7 +1196,7 @@ export default function App(){
 
 
  const overlays=<>
- {cartOpen&&<div className="overlay" onClick={()=>setCartOpen(false)}><aside className="drawer" onClick={e=>e.stopPropagation()}><header className="cart-header"><button type="button" className="cart-home-btn" onClick={()=>{setCartOpen(false);setView('shop');}}><span aria-hidden="true">ÃƒÂ¢Ã¢â‚¬Â Ã‚Â</span> Home</button><h2>Your cart</h2><button className="link" onClick={()=>setCartOpen(false)}>Close</button></header>{!lines.length?<>
+ {cartOpen&&<div className="overlay" onClick={()=>setCartOpen(false)}><aside className="drawer" onClick={e=>e.stopPropagation()}><header className="cart-header"><button type="button" className="cart-home-btn" onClick={()=>{setCartOpen(false);setView('shop');}}><span aria-hidden="true">⌂</span> Home</button><h2>Your cart</h2><button className="link" onClick={()=>setCartOpen(false)}>Close</button></header>{!lines.length?<>
 <p className="empty">Cart khaali hai.</p>
 <section style={{marginTop:20,paddingTop:16,borderTop:"1px solid #e5e7eb"}}>
   <h3 style={{fontSize:18,marginBottom:6}}>Budget Treats {"\u2728"}</h3>
