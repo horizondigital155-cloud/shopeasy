@@ -91,3 +91,6 @@ server/.env
 client/.env.local
 .vercel
 .env*
+
+# Supabase local CLI metadata
+supabase/.temp/
