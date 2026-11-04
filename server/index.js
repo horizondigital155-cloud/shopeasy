@@ -1,4 +1,4 @@
-import nodemailer from 'nodemailer';
+import { google } from 'googleapis';
 import 'dotenv/config';
 
 import express from 'express';
@@ -62,55 +62,90 @@ const setSession = (res, payload) => res.cookie('sid', jwt.sign(payload, JWT_SEC
   maxAge: 30 * 24 * 60 * 60 * 1000, path: '/'
 });
 async function sendOtpEmail({ to, subject, text, html }) {
-  const host = process.env.SMTP_HOST || 'smtp.gmail.com';
-  const port = Number(process.env.SMTP_PORT || 465);
-  const user = process.env.SMTP_USER || '';
-  const pass = process.env.SMTP_PASS || '';
-  const from = process.env.SMTP_FROM || process.env.SMTP_FROM_EMAIL || user;
-  const secure = port === 465;
+  const clientId = process.env.GMAIL_CLIENT_ID || '';
+  const clientSecret = process.env.GMAIL_CLIENT_SECRET || '';
+  const refreshToken = process.env.GMAIL_REFRESH_TOKEN || '';
+  const from = process.env.GMAIL_SENDER || '';
 
-  if (!user || !pass || !from) {
-    throw new Error('Gmail SMTP configuration is incomplete. Check Render Environment.');
+  if (!clientId || !clientSecret || !refreshToken || !from) {
+    throw new Error('Gmail API configuration incomplete. Check GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, GMAIL_REFRESH_TOKEN and GMAIL_SENDER.');
   }
 
-  const transporter = nodemailer.createTransport({
-    host,
-    port,
-    secure,
-    auth: { user, pass },
-    connectionTimeout: 15000,
-    greetingTimeout: 15000,
-    socketTimeout: 20000
+  const safeTo = String(to || '').trim();
+  const safeSubject = String(subject || 'ShopEasy verification')
+    .replace(/[\r\n]+/g, ' ')
+    .trim();
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(safeTo)) {
+    throw new Error('Invalid OTP recipient email address.');
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(from)) {
+    throw new Error('Invalid GMAIL_SENDER email address.');
+  }
+
+  const oauth2Client = new google.auth.OAuth2(
+    clientId,
+    clientSecret
+  );
+
+  oauth2Client.setCredentials({
+    refresh_token: refreshToken
   });
 
+  const gmail = google.gmail({
+    version: 'v1',
+    auth: oauth2Client
+  });
+
+  const boundary = `shopeasy_${crypto.randomBytes(16).toString('hex')}`;
+
+  const mimeMessage = [
+    `From: ShopEasy <${from}>`,
+    `To: ${safeTo}`,
+    `Subject: ${safeSubject}`,
+    'MIME-Version: 1.0',
+    `Content-Type: multipart/alternative; boundary="${boundary}"`,
+    '',
+    `--${boundary}`,
+    'Content-Type: text/plain; charset="UTF-8"',
+    'Content-Transfer-Encoding: base64',
+    '',
+    Buffer.from(String(text || ''), 'utf8').toString('base64'),
+    `--${boundary}`,
+    'Content-Type: text/html; charset="UTF-8"',
+    'Content-Transfer-Encoding: base64',
+    '',
+    Buffer.from(String(html || text || ''), 'utf8').toString('base64'),
+    `--${boundary}--`,
+    ''
+  ].join('\r\n');
+
+  const raw = Buffer.from(mimeMessage, 'utf8').toString('base64url');
+
   try {
-    const info = await transporter.sendMail({
-      from,
-      to,
-      subject,
-      text,
-      html
+    const response = await gmail.users.messages.send({
+      userId: 'me',
+      requestBody: { raw }
     });
 
-    console.log('[ShopEasy] Gmail SMTP accepted OTP email:', {
-      messageId: info.messageId,
-      accepted: info.accepted
+    console.log('[ShopEasy] Gmail API accepted OTP email:', {
+      messageId: response.data?.id || null,
+      threadId: response.data?.threadId || null
     });
 
-    if (!info.accepted || info.accepted.length === 0) {
-      throw new Error('Gmail SMTP did not accept the recipient.');
+    if (!response.data?.id) {
+      throw new Error('Gmail API did not return a message ID.');
     }
 
-    return info;
+    return response.data;
   } catch (error) {
-    console.error('[ShopEasy] Gmail SMTP send failed:', {
-      message: error?.message || 'Unknown SMTP error',
+    console.error('[ShopEasy] Gmail API send failed:', {
+      message: error?.message || 'Unknown Gmail API error',
       code: error?.code || null,
-      responseCode: error?.responseCode || null
+      status: error?.response?.status || null
     });
     throw error;
-  } finally {
-    transporter.close();
   }
 }
 
