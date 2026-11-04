@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+﻿import { useEffect, useMemo, useRef, useState } from 'react';
 import { CATEGORY_NAMES } from './categories.js';
 export const getApiBaseUrl = () => {
   if (typeof window !== 'undefined') {
@@ -6,7 +6,7 @@ export const getApiBaseUrl = () => {
       return localStorage.getItem('shopeasy_api_server') || 'http://localhost:4000';
     }
   }
-  return '';
+  return localStorage.getItem('shopeasy_api_server') || 'https://shopeasy-backend-31no.onrender.com';
 };
 
 export const resolveImageUrl = (url) => {
@@ -319,7 +319,7 @@ function Admin({products,onRefresh,riders,setRiders}){
  const maxSales=Math.max(1,...lastSeven.map(d=>d.sales));
  const qrValue=upiId.trim()?`upi://pay?pa=${encodeURIComponent(upiId.trim())}&pn=${encodeURIComponent(upiName.trim()||'ShopEasy')}${upiAmount&&Number(upiAmount)>0?`&am=${encodeURIComponent(Number(upiAmount).toFixed(2))}`:''}&cu=INR`:'';
  return <section className="admin-panel">
-  <div className="admin-dashboard-head"><div><p className="admin-eyebrow">SHOPEASY CONTROL CENTER</p><h1>Admin Dashboard</h1><p className="admin-subtitle">Store performance, orders aur delivery operations ek jagah.</p></div><button type="button" className="btn" onClick={()=>{onRefresh();loadOrders()}} disabled={ordersBusy}>{ordersBusy?'RefreshingÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÂ¯Ã‚Â¿Ã‚Â½?ÃƒÂ¯Ã‚Â¿Ã‚Â½ÃƒÂ¯Ã‚Â¿Ã‚Â½ÃƒÂ¯Ã‚Â¿Ã‚Â½':'ÃƒÂ¯Ã‚Â¿Ã‚Â½?ÃƒÂ¯Ã‚Â¿Ã‚Â½ÃƒÂ¯Ã‚Â¿Ã‚Â½  Refresh data'}</button></div>
+  <div className="admin-dashboard-head"><div><p className="admin-eyebrow">SHOPEASY CONTROL CENTER</p><h1>Admin Dashboard</h1><p className="admin-subtitle">Store performance, orders aur delivery operations ek jagah.</p></div><button type="button" className="btn" onClick={()=>{onRefresh();loadOrders()}} disabled={ordersBusy}>{ordersBusy?'RefreshingÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½?ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½':'ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½?ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½  Refresh data'}</button></div>
   <div className="tabs admin-tabs">
    <button className={tab==='dashboard'?'on':''} onClick={()=>setTab('dashboard')}>Dashboard</button>
    <button className={tab==='products'?'on':''} onClick={()=>setTab('products')}>Products ({products.length})</button>
@@ -339,7 +339,7 @@ function Admin({products,onRefresh,riders,setRiders}){
     <article className="dashboard-stat stat-purple"><span>Delivery partners</span><strong>{riders.length}</strong><small>{riders.filter(r=>r.active).length} active partners</small></article>
    </div>
    <div className="dashboard-grid">
-    <section className="dashboard-card dashboard-chart"><div className="dashboard-card-head"><div><h3>Sales & Orders</h3><p>Last 7 days - based on order creation date</p></div><button className="link" onClick={()=>{setTab('orders');loadOrders()}}>View orders ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÂ¯Ã‚Â¿Ã‚Â½?ÃƒÂ¯Ã‚Â¿Ã‚Â½Ãƒâ€šÃ‚Â ÃƒÂ¯Ã‚Â¿Ã‚Â½?ÃƒÂ¯Ã‚Â¿Ã‚Â½ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢</button></div>
+    <section className="dashboard-card dashboard-chart"><div className="dashboard-card-head"><div><h3>Sales & Orders</h3><p>Last 7 days - based on order creation date</p></div><button className="link" onClick={()=>{setTab('orders');loadOrders()}}>View orders ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½?ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½?ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢</button></div>
      <div className="dashboard-bars">{lastSeven.map(d=><div className="dashboard-bar-col" key={d.label} title={`${d.label}: ${rupee(d.sales)} - ${d.orders} orders`}><span className="dashboard-bar-value">{d.sales?rupee(d.sales):'?0'}</span><div className="dashboard-bar-track"><div className="dashboard-bar" style={{height:`${Math.max(d.sales?5:0,(d.sales/maxSales)*100)}%`}}/></div><b>{d.label}</b><small>{d.orders} orders</small></div>)}</div>
     </section>
     <section className="dashboard-card"><div className="dashboard-card-head"><div><h3>Best-selling products</h3><p>Ranked by units in recorded orders</p></div></div>
@@ -347,21 +347,21 @@ function Admin({products,onRefresh,riders,setRiders}){
     </section>
    </div>
    <div className="dashboard-grid dashboard-grid-bottom">
-    <section className="dashboard-card"><div className="dashboard-card-head"><div><h3>Recent orders</h3><p>Latest orders from your store</p></div><button className="link" onClick={()=>{setTab('orders');loadOrders()}}>All orders ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÂ¯Ã‚Â¿Ã‚Â½?ÃƒÂ¯Ã‚Â¿Ã‚Â½Ãƒâ€šÃ‚Â ÃƒÂ¯Ã‚Â¿Ã‚Â½?ÃƒÂ¯Ã‚Â¿Ã‚Â½ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢</button></div>
-     {orders.length?<div className="dashboard-recent">{[...orders].sort((a,b)=>Number(b.created||0)-Number(a.created||0)).slice(0,5).map(o=><div className="dashboard-recent-row" key={o.id}><div><b>Order #{o.id}</b><small>{o.name||o.phone||'Customer'} - {o.created?new Date(Number(o.created)).toLocaleDateString('en-IN'):'Date unavailable'}</small></div><span className={'dashboard-status status-'+String(o.status||'placed').toLowerCase().replace(/[^a-z0-9_-]/g,'')}>{o.status||'placed'}</span><strong>{rupee(o.total)}</strong></div>)}</div>:<p className="dashboard-empty">{ordersBusy?'Orders load ho rahe hainÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÂ¯Ã‚Â¿Ã‚Â½?ÃƒÂ¯Ã‚Â¿Ã‚Â½ÃƒÂ¯Ã‚Â¿Ã‚Â½ÃƒÂ¯Ã‚Â¿Ã‚Â½':'Abhi koi order nahi hai.'}</p>}
+    <section className="dashboard-card"><div className="dashboard-card-head"><div><h3>Recent orders</h3><p>Latest orders from your store</p></div><button className="link" onClick={()=>{setTab('orders');loadOrders()}}>All orders ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½?ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½?ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢</button></div>
+     {orders.length?<div className="dashboard-recent">{[...orders].sort((a,b)=>Number(b.created||0)-Number(a.created||0)).slice(0,5).map(o=><div className="dashboard-recent-row" key={o.id}><div><b>Order #{o.id}</b><small>{o.name||o.phone||'Customer'} - {o.created?new Date(Number(o.created)).toLocaleDateString('en-IN'):'Date unavailable'}</small></div><span className={'dashboard-status status-'+String(o.status||'placed').toLowerCase().replace(/[^a-z0-9_-]/g,'')}>{o.status||'placed'}</span><strong>{rupee(o.total)}</strong></div>)}</div>:<p className="dashboard-empty">{ordersBusy?'Orders load ho rahe hainÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½?ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½':'Abhi koi order nahi hai.'}</p>}
     </section>
     <section className="dashboard-card"><div className="dashboard-card-head"><div><h3>Quick actions</h3><p>Common store management tasks</p></div></div>
-     <div className="dashboard-quick-actions"><button onClick={()=>{setEdit({});setTab('products')}}><span>ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¯ÃƒÂ¯Ã‚Â¿Ã‚Â½?ÃƒÂ¯Ã‚Â¿Ã‚Â½ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¹</span><div><b>Add product</b><small>Catalogue mein naya product add karein</small></div></button><button onClick={()=>setTab('riders')}><span>ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÂ¯Ã‚Â¿Ã‚Â½?ÃƒÂ¯Ã‚Â¿Ã‚Â½Ãƒâ€šÃ‚Â ?</span><div><b>Manage riders</b><small>Delivery partner add ya remove karein</small></div></button><button onClick={()=>setTab('finance')}><span>?</span><div><b>Record expense</b><small>Store expense aur profit dekhein</small></div></button><button onClick={()=>setTab('upi')}><span>ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÂ¯Ã‚Â¿Ã‚Â½?ÃƒÂ¯Ã‚Â¿Ã‚Â½ÃƒÂ¯Ã‚Â¿Ã‚Â½?ÃƒÂ¯Ã‚Â¿Ã‚Â½ÃƒÂ¯Ã‚Â¿Ã‚Â½</span><div><b>UPI QR settings</b><small>Payment QR generate karein</small></div></button></div>
+     <div className="dashboard-quick-actions"><button onClick={()=>{setEdit({});setTab('products')}}><span>ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¯ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½?ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¹</span><div><b>Add product</b><small>Catalogue mein naya product add karein</small></div></button><button onClick={()=>setTab('riders')}><span>ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½?ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ?</span><div><b>Manage riders</b><small>Delivery partner add ya remove karein</small></div></button><button onClick={()=>setTab('finance')}><span>?</span><div><b>Record expense</b><small>Store expense aur profit dekhein</small></div></button><button onClick={()=>setTab('upi')}><span>ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½?ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½?ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½</span><div><b>UPI QR settings</b><small>Payment QR generate karein</small></div></button></div>
     </section>
    </div>
    <p className="dashboard-disclaimer">Note: Delivered sales yahan delivered orders ke total se calculate hoti hain. Expenses browser ke is device par save hote hain. Yeh dashboard abhi accounting software ya bank reconciliation ka replacement nahi hai.</p>
   </div>}
 
   {tab==='products'&&<><div className="sechead"><h2>Manage products</h2><button className="btn" onClick={()=>setEdit({})}>+ Add product</button></div>{edit&&<ProductForm initial={edit.id?edit:null} onSave={save} onCancel={()=>setEdit(null)} busy={busy}/>}
-   <div className="admin-products">{products.map(p=><article className="admin-product" key={p.id}><img src={p.image||p.originalImage} alt={p.name}/><div className="admin-product-info"><b>{p.name}</b><span>{p.category} - {rupee(p.price)}</span><div className="admin-actions"><button className="link" onClick={()=>setEdit({...p,image:p.originalImage||p.image})}>Edit</button><label className="link upload-label">Photo<input type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>photo(p,e.target.files?.[0])} hidden/></label>{p.hasCustomImage&&<button className="link" onClick={()=>resetPhoto(p)}>Original</button>}<button className="link danger" onClick={async()=>{if(confirm(`Delete ${p.name}?`)){try{await api('/admin/products/'+p.id,'DELETE');await onRefresh()}catch(e){setErr(e.message)}}}}>Delete</button></div>{photoBusy===p.id&&<small>Uploading photoÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÂ¯Ã‚Â¿Ã‚Â½?ÃƒÂ¯Ã‚Â¿Ã‚Â½ÃƒÂ¯Ã‚Â¿Ã‚Â½ÃƒÂ¯Ã‚Â¿Ã‚Â½</small>}</div></article>)}</div>
+   <div className="admin-products">{products.map(p=><article className="admin-product" key={p.id}><img src={p.image||p.originalImage} alt={p.name}/><div className="admin-product-info"><b>{p.name}</b><span>{p.category} - {rupee(p.price)}</span><div className="admin-actions"><button className="link" onClick={()=>setEdit({...p,image:p.originalImage||p.image})}>Edit</button><label className="link upload-label">Photo<input type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>photo(p,e.target.files?.[0])} hidden/></label>{p.hasCustomImage&&<button className="link" onClick={()=>resetPhoto(p)}>Original</button>}<button className="link danger" onClick={async()=>{if(confirm(`Delete ${p.name}?`)){try{await api('/admin/products/'+p.id,'DELETE');await onRefresh()}catch(e){setErr(e.message)}}}}>Delete</button></div>{photoBusy===p.id&&<small>Uploading photoÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½?ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½</small>}</div></article>)}</div>
   </>}
 
-  {tab==='orders'&&<><div className="sechead"><h2>Order management</h2><button className="btn" onClick={loadOrders} disabled={ordersBusy}>{ordersBusy?'LoadingÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÂ¯Ã‚Â¿Ã‚Â½?ÃƒÂ¯Ã‚Â¿Ã‚Â½ÃƒÂ¯Ã‚Â¿Ã‚Â½ÃƒÂ¯Ã‚Â¿Ã‚Â½':'Refresh orders'}</button></div>{ordersBusy&&!orders.length?<p className="empty">Orders load ho rahe hainÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÂ¯Ã‚Â¿Ã‚Â½?ÃƒÂ¯Ã‚Â¿Ã‚Â½ÃƒÂ¯Ã‚Â¿Ã‚Â½ÃƒÂ¯Ã‚Â¿Ã‚Â½</p>:<Orders user={{role:'admin'}} riders={riders} reload={()=>{onRefresh();loadOrders()}}/>}</>}
+  {tab==='orders'&&<><div className="sechead"><h2>Order management</h2><button className="btn" onClick={loadOrders} disabled={ordersBusy}>{ordersBusy?'LoadingÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½?ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½':'Refresh orders'}</button></div>{ordersBusy&&!orders.length?<p className="empty">Orders load ho rahe hainÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½?ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½</p>:<Orders user={{role:'admin'}} riders={riders} reload={()=>{onRefresh();loadOrders()}}/>}</>}
 
   {tab==='riders'&&<><h2>Add delivery partner</h2><form className="admin-form" onSubmit={addRider}><label>Name<input value={rider.name} onChange={e=>setRider({...rider,name:e.target.value})} required/></label><label>Phone<input inputMode="numeric" maxLength={10} value={rider.phone} onChange={e=>setRider({...rider,phone:e.target.value})} required/></label><label>Initial password (8+ chars)<input type="password" minLength={8} value={rider.password} onChange={e=>setRider({...rider,password:e.target.value})} required/></label><label>Photo URL (optional)<input type="url" value={rider.photo} onChange={e=>setRider({...rider,photo:e.target.value})}/></label><button className="btn">Add rider</button></form><div className="admin-products">{riders.map(r=><article className="admin-product" key={r.id}>{r.photo?<img src={r.photo} alt={r.name}/>:<span className="rider-ph"><Ic n="rider" s={34}/></span>}<div className="admin-product-info"><b>{r.name}</b><span>{r.phone} - {r.active?'Active':'Inactive'}</span><button className="link danger" onClick={async()=>{if(confirm('Rider remove karein?')){try{await api('/admin/riders/'+r.id,'DELETE');setRiders(await api('/admin/riders'))}catch(e){setErr(e.message)}}}}>Remove rider</button></div></article>)}</div></>}
 
@@ -1050,7 +1050,7 @@ export default function App(){
       <article className="order" key={o.id}>
        <header><b>Order #{o.id}</b><span>{o.available ? 'New - Waiting for acceptance' : o.status}</span></header>
        <p>{o.address}</p>
-       <ul>{o.items.map((i, j) => <li key={j}>{i.name}{i.unit||i.product?.unit ? ` ? ${i.unit||i.product?.unit}` : ""} ÃƒÂ¯Ã‚Â¿Ã‚Â½. Qty: {i.qty??1}{i.price!=null ? ` ÃƒÂ¯Ã‚Â¿Ã‚Â½. ${rupee(Number(i.price)*Number(i.qty??1))}` : ""}</li>)}</ul>
+       <ul>{o.items.map((i, j) => <li key={j}>{i.name}{i.unit||i.product?.unit ? ` ? ${i.unit||i.product?.unit}` : ""} ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½. Qty: {i.qty??1}{i.price!=null ? ` ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½. ${rupee(Number(i.price)*Number(i.qty??1))}` : ""}</li>)}</ul>
        {o.available ? (
         <button className="btn" onClick={async () => {
          try {
@@ -1180,7 +1180,7 @@ export default function App(){
 
 
  const overlays=<>
- {cartOpen&&<div className="overlay" onClick={()=>setCartOpen(false)}><aside className="drawer" onClick={e=>e.stopPropagation()}><header className="cart-header"><button type="button" className="cart-home-btn" onClick={()=>{setCartOpen(false);setView('shop');}}><span aria-hidden="true">Ã¢â€ Â</span> Home</button><h2>Your cart</h2><button className="link" onClick={()=>setCartOpen(false)}>Close</button></header>{!lines.length?<>
+ {cartOpen&&<div className="overlay" onClick={()=>setCartOpen(false)}><aside className="drawer" onClick={e=>e.stopPropagation()}><header className="cart-header"><button type="button" className="cart-home-btn" onClick={()=>{setCartOpen(false);setView('shop');}}><span aria-hidden="true">ÃƒÂ¢Ã¢â‚¬Â Ã‚Â</span> Home</button><h2>Your cart</h2><button className="link" onClick={()=>setCartOpen(false)}>Close</button></header>{!lines.length?<>
 <p className="empty">Cart khaali hai.</p>
 <section style={{marginTop:20,paddingTop:16,borderTop:"1px solid #e5e7eb"}}>
   <h3 style={{fontSize:18,marginBottom:6}}>Budget Treats {"\u2728"}</h3>
@@ -1335,3 +1335,4 @@ export default function App(){
  {overlays}
 </div>;</>
 }
+
