@@ -36,7 +36,7 @@ export const resolveImageUrl = (url) => {
 const api = async (url, method='GET', body) => {
   const isForm = body instanceof FormData;
   const baseUrl = getApiBaseUrl();
-  const r=await fetch(baseUrl+'/api'+url,{method,credentials:'include',headers:body&&!isForm?{'Content-Type':'application/json'}:{},body:body&&(isForm?body:JSON.stringify(body))});
+  const r=await fetch(baseUrl+'/api'+url,{method,credentials:'include',cache:'no-store',headers:body&&!isForm?{'Content-Type':'application/json'}:{},body:body&&(isForm?body:JSON.stringify(body))});
   const d=await r.json().catch(()=>({}));
   if(!r.ok)throw new Error(d.error||'Request fail hua');return d;
 };

@@ -28,6 +28,15 @@ if (JWT_SECRET.length < 32) {
 
 app.set('trust proxy', 1);
 app.disable('x-powered-by');
+app.disable('etag');
+
+// Never cache authenticated API responses or session information.
+app.use('/api', (req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  next();
+});
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
@@ -58,7 +67,7 @@ const validEmail = value => value.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.
 const sha = value => crypto.createHash('sha256').update(String(value)).digest('hex');
 const otpHash = (email, otp) => sha(`${email}:${otp}:${JWT_SECRET}`);
 const setSession = (res, payload) => res.cookie('sid', jwt.sign(payload, JWT_SECRET, { expiresIn: '30d' }), {
-  httpOnly: true, sameSite: 'lax', secure: Boolean(res.req?.secure),
+  httpOnly: true, sameSite: 'none', secure: true,
   maxAge: 30 * 24 * 60 * 60 * 1000, path: '/'
 });
 async function sendOtpEmail({ to, subject, text, html }) {
