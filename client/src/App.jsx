@@ -271,7 +271,7 @@ function Orders({user,riders=[],reload}){
     'Please confirm and do not deliver this order.'
    ].join('\n');
    toast(result.message||'Cancellation recorded. WhatsApp khul raha hai.');
-   window.location.href='https://wa.me/'+(phone.startsWith('91')?phone:'91'+phone)+'&text='+encodeURIComponent(message);
+   window.location.href='https://wa.me/'+(phone.startsWith('91')?phone:'91'+phone)+ '?text='+encodeURIComponent(message);
   }catch(e){setErr(e.message||'Order cancel nahi hua.');}
  };
  if(!rows)return <p className="empty">{err||'Loading orders...'}</p>;
@@ -961,8 +961,8 @@ export default function App(){
      setCartOpen(false);
      setView('orders');
      toast('Order placed! Receipt download ho rahi hai. WhatsApp khulega.');
-     const waUrl='https://wa.me/918005711525&text='+encodeURIComponent(message);
-    const waAppUrl = 'https://wa.me/918005711525&text=' + encodeURIComponent(message);
+     const waUrl='https://wa.me/918005711525?text='+encodeURIComponent(message);
+    const waAppUrl = 'https://wa.me/918005711525?text=' + encodeURIComponent(message);
     const waWebUrl = 'https://wa.me/918005711525?text=' + encodeURIComponent(message);
 
     // Android mobile: WhatsApp app open karne ki koshish, browser fallback

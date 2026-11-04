@@ -87,3 +87,7 @@ client/capacitor-*-backup/
 /server/patch-earnings.cjs
 /server/auto-images.py
 /patch-delivery.cjs
+server/.env
+client/.env.local
+.vercel
+.env*
