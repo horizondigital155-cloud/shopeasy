@@ -1,13 +1,23 @@
+import nodemailer from 'nodemailer';
 import 'dotenv/config';
+
 import express from 'express';
+
 import cookieParser from 'cookie-parser';
+
 import helmet from 'helmet';
+
 import rateLimit from 'express-rate-limit';
+
 import jwt from 'jsonwebtoken';
+
 import crypto from 'node:crypto';
 
+
 import { createAuthRouter } from './auth-routes.js';
+
 import { supabase } from './supabase.js';
+
 
 const app = express();
 const PORT = Number(process.env.PORT || 4000);
@@ -52,47 +62,55 @@ const setSession = (res, payload) => res.cookie('sid', jwt.sign(payload, JWT_SEC
   maxAge: 30 * 24 * 60 * 60 * 1000, path: '/'
 });
 async function sendOtpEmail({ to, subject, text, html }) {
-  const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+  const host = process.env.SMTP_HOST || 'smtp.gmail.com';
+  const port = Number(process.env.SMTP_PORT || 465);
+  const user = process.env.SMTP_USER || '';
+  const pass = process.env.SMTP_PASS || '';
+  const from = process.env.SMTP_FROM || process.env.SMTP_FROM_EMAIL || user;
+  const secure = port === 465;
 
-  if (!apiKey) {
-    throw new Error('RESEND_API_KEY is not configured.');
+  if (!user || !pass || !from) {
+    throw new Error('Gmail SMTP configuration is incomplete. Check Render Environment.');
   }
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15000);
+  const transporter = nodemailer.createTransport({
+    host,
+    port,
+    secure,
+    auth: { user, pass },
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+    socketTimeout: 20000
+  });
 
   try {
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ from, to: [to], subject, text, html }),
-      signal: controller.signal
+    const info = await transporter.sendMail({
+      from,
+      to,
+      subject,
+      text,
+      html
     });
 
-    const result = await response.json().catch(() => ({}));
+    console.log('[ShopEasy] Gmail SMTP accepted OTP email:', {
+      messageId: info.messageId,
+      accepted: info.accepted
+    });
 
-    if (!response.ok) {
-      console.error('Resend API rejected email:', response.status, result);
-      throw new Error(`Resend email failed with HTTP ${response.status}.`);
+    if (!info.accepted || info.accepted.length === 0) {
+      throw new Error('Gmail SMTP did not accept the recipient.');
     }
 
-    if (!result.id) {
-      throw new Error('Resend did not return an email ID.');
-    }
-
-    console.log('[ShopEasy] OTP email accepted by Resend:', result.id);
-    return result;
+    return info;
   } catch (error) {
-    if (error.name === 'AbortError') {
-      throw new Error('Resend API request timed out.');
-    }
+    console.error('[ShopEasy] Gmail SMTP send failed:', {
+      message: error?.message || 'Unknown SMTP error',
+      code: error?.code || null,
+      responseCode: error?.responseCode || null
+    });
     throw error;
   } finally {
-    clearTimeout(timeout);
+    transporter.close();
   }
 }
 

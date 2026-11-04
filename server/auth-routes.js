@@ -65,10 +65,14 @@ export function createAuthRouter({
         error: 'Signup ke liye naam aur valid 10-digit mobile number zaroori hai.'
       });
     }
-
-    if (!process.env.RESEND_API_KEY || !process.env.RESEND_FROM_EMAIL) {
+    if (
+      !process.env.SMTP_HOST ||
+      !process.env.SMTP_USER ||
+      !process.env.SMTP_PASS ||
+      !(process.env.SMTP_FROM || process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER)
+    ) {
       return res.status(503).json({
-        error: 'Resend email service configure nahi hai. Render Environment check karein.'
+        error: 'Gmail SMTP configure nahi hai. Render Environment check karein.'
       });
     }
 
