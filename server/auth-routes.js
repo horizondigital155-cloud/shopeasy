@@ -16,7 +16,7 @@ export function createAuthRouter({
   validEmail,
   otpHash,
   setSession,
-  emailTransporter,
+  sendOtpEmail,
   JWT_SECRET,
   ADMIN_PHONE,
   ADMIN_PASS_HASH
@@ -66,9 +66,9 @@ export function createAuthRouter({
       });
     }
 
-    if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    if (!process.env.RESEND_API_KEY || !process.env.RESEND_FROM_EMAIL) {
       return res.status(503).json({
-        error: 'Email service configure nahi hai. Server .env check karein.'
+        error: 'Resend email service configure nahi hai. Render Environment check karein.'
       });
     }
 
@@ -135,8 +135,7 @@ export function createAuthRouter({
       const now = Date.now();
       const expires = now + 5 * 60 * 1000;
 
-      await emailTransporter.sendMail({
-        from: process.env.SMTP_FROM || process.env.SMTP_USER,
+      await sendOtpEmail({
         to: email,
         subject: 'ShopEasy email verification code',
         text: `Your ShopEasy verification code is ${otp}. It expires in 5 minutes. If you did not request it, ignore this email.`,

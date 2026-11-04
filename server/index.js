@@ -5,7 +5,7 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import jwt from 'jsonwebtoken';
 import crypto from 'node:crypto';
-import nodemailer from 'nodemailer';
+
 import { createAuthRouter } from './auth-routes.js';
 import { supabase } from './supabase.js';
 
@@ -51,13 +51,50 @@ const setSession = (res, payload) => res.cookie('sid', jwt.sign(payload, JWT_SEC
   httpOnly: true, sameSite: 'lax', secure: Boolean(res.req?.secure),
   maxAge: 30 * 24 * 60 * 60 * 1000, path: '/'
 });
-const emailTransporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT || 465),
-  secure: Number(process.env.SMTP_PORT || 465) === 465,
-  auth: process.env.SMTP_USER && process.env.SMTP_PASS
-    ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined
-});
+async function sendOtpEmail({ to, subject, text, html }) {
+  const apiKey = process.env.RESEND_API_KEY;
+  const from = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+
+  if (!apiKey) {
+    throw new Error('RESEND_API_KEY is not configured.');
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+
+  try {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ from, to: [to], subject, text, html }),
+      signal: controller.signal
+    });
+
+    const result = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      console.error('Resend API rejected email:', response.status, result);
+      throw new Error(`Resend email failed with HTTP ${response.status}.`);
+    }
+
+    if (!result.id) {
+      throw new Error('Resend did not return an email ID.');
+    }
+
+    console.log('[ShopEasy] OTP email accepted by Resend:', result.id);
+    return result;
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      throw new Error('Resend API request timed out.');
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
 
 app.use((req, _res, next) => {
   try { req.user = jwt.verify(req.cookies.sid || '', JWT_SECRET); }
@@ -79,7 +116,7 @@ const safeItems = value => {
 app.get('/api/health', (_req, res) => res.json({ ok: true, app: 'ShopEasy', database: 'supabase' }));
 app.use(createAuthRouter({
   supabase, limit, cleanPhone, validPhone, normalizeEmail, validEmail,
-  otpHash, setSession, emailTransporter, JWT_SECRET,
+  otpHash, setSession, sendOtpEmail, JWT_SECRET,
   ADMIN_PHONE: process.env.ADMIN_PHONE || '',
   ADMIN_PASS_HASH: process.env.ADMIN_PASS_HASH || ''
 }));
