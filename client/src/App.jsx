@@ -1,12 +1,28 @@
-﻿import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { CATEGORY_NAMES } from './categories.js';
+const safeStorageGet = (key, fallback = '') => {
+  try {
+    return window.localStorage.getItem(key) ?? fallback;
+  } catch {
+    return fallback;
+  }
+};
+
+const safeStorageSet = (key, value) => {
+  try {
+    window.localStorage.setItem(key, value);
+    return true;
+  } catch {
+    return false;
+  }
+};
 export const getApiBaseUrl = () => {
   if (typeof window !== 'undefined') {
     if (window.Capacitor?.isNativePlatform() || (window.location.origin.includes('localhost') && !window.location.port) || window.location.protocol === 'file:' || (window.location.hostname === 'localhost' && window.location.port !== '5173')) {
-      return localStorage.getItem('shopeasy_api_server') || 'http://localhost:4000';
+      return safeStorageGet('shopeasy_api_server') || 'http://localhost:4000';
     }
   }
-  return localStorage.getItem('shopeasy_api_server') || 'https://shopeasy-backend-31no.onrender.com';
+  return safeStorageGet('shopeasy_api_server') || 'https://shopeasy-backend-31no.onrender.com';
 };
 
 export const resolveImageUrl = (url) => {
@@ -294,9 +310,9 @@ function Admin({products,onRefresh,riders,setRiders}){
  const [orders,setOrders]=useState([]);
  const [ordersBusy,setOrdersBusy]=useState(false);
  const [expense,setExpense]=useState('');
- const [expenses,setExpenses]=useState(()=>{try{return JSON.parse(localStorage.getItem('shopeasy-admin-expenses')||'[]')}catch{return[]}});
- const [upiId,setUpiId]=useState(()=>localStorage.getItem('shopeasy-upi-id')||'');
- const [upiName,setUpiName]=useState(()=>localStorage.getItem('shopeasy-upi-name')||'ShopEasy');
+ const [expenses,setExpenses]=useState(()=>{try{return JSON.parse(safeStorageGet('shopeasy-admin-expenses')||'[]')}catch{return[]}});
+ const [upiId,setUpiId]=useState(()=>safeStorageGet('shopeasy-upi-id')||'');
+ const [upiName,setUpiName]=useState(()=>safeStorageGet('shopeasy-upi-name')||'ShopEasy');
  const [upiAmount,setUpiAmount]=useState('');
  const [upiSaved,setUpiSaved]=useState(false);
 
@@ -306,9 +322,9 @@ function Admin({products,onRefresh,riders,setRiders}){
  const photo=async(p,file)=>{if(!file)return;setPhotoBusy(p.id);setErr('');try{const blob=await downscaleJpeg(file);if(blob.size>700*1024)throw new Error('Image compress nahi hui. Chhoti image select karein.');const fd=new FormData();fd.append('photo',blob,'product.jpg');await api(`/admin/products/${p.id}/photo`,'POST',fd);await onRefresh()}catch(e){setErr(e.message)}finally{setPhotoBusy('')}};
  const resetPhoto=async p=>{try{await api(`/admin/products/${p.id}/photo`,'DELETE');await onRefresh()}catch(e){setErr(e.message)}};
  const addRider=async e=>{e.preventDefault();setErr('');try{await api('/admin/riders','POST',rider);setRider({name:'',phone:'',password:'',photo:''});setRiders(await api('/admin/riders'))}catch(x){setErr(x.message)}};
- const addExpense=e=>{e.preventDefault();const amount=Number(expense);if(!Number.isFinite(amount)||amount<=0)return;const next=[{id:Date.now(),amount,created:Date.now()} ,...expenses];setExpenses(next);localStorage.setItem('shopeasy-admin-expenses',JSON.stringify(next));setExpense('')};
- const removeExpense=id=>{const next=expenses.filter(x=>x.id!==id);setExpenses(next);localStorage.setItem('shopeasy-admin-expenses',JSON.stringify(next))};
- const saveUpi=e=>{e.preventDefault();localStorage.setItem('shopeasy-upi-id',upiId.trim());localStorage.setItem('shopeasy-upi-name',upiName.trim()||'ShopEasy');setUpiSaved(true);setTimeout(()=>setUpiSaved(false),2500)};
+ const addExpense=e=>{e.preventDefault();const amount=Number(expense);if(!Number.isFinite(amount)||amount<=0)return;const next=[{id:Date.now(),amount,created:Date.now()} ,...expenses];setExpenses(next);safeStorageSet('shopeasy-admin-expenses',JSON.stringify(next));setExpense('')};
+ const removeExpense=id=>{const next=expenses.filter(x=>x.id!==id);setExpenses(next);safeStorageSet('shopeasy-admin-expenses',JSON.stringify(next))};
+ const saveUpi=e=>{e.preventDefault();safeStorageSet('shopeasy-upi-id',upiId.trim());safeStorageSet('shopeasy-upi-name',upiName.trim()||'ShopEasy');setUpiSaved(true);setTimeout(()=>setUpiSaved(false),2500)};
  const paidOrders=orders.filter(o=>String(o.status||'').toLowerCase()==='delivered');
  const totalOrderValue=orders.reduce((sum,o)=>sum+Number(o.total||0),0);
  const deliveredValue=paidOrders.reduce((sum,o)=>sum+Number(o.total||0),0);
