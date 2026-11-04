@@ -1,9 +1,12 @@
-{
-  "version": 2,
-  "installCommand": "npm install --no-audit --no-fund && npm --prefix client install --no-audit --no-fund",
-  "buildCommand": "npm --prefix client run build",
-  "outputDirectory": "client/dist",
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
-  ]
+﻿{
+    "version":  2,
+    "installCommand":  "npm install --no-audit --no-fund \u0026\u0026 npm --prefix client install --no-audit --no-fund \u0026\u0026 npm --prefix server install --no-audit --no-fund",
+    "buildCommand":  "npm --prefix client run build",
+    "outputDirectory":  "client/dist",
+    "rewrites":  [
+                     {
+                         "source":  "/(.*)",
+                         "destination":  "/index.html"
+                     }
+                 ]
 }
