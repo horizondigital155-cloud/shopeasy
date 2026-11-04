@@ -1,4 +1,4 @@
-﻿import express from 'express';
+import express from 'express';
 import bcrypt from 'bcryptjs';
 import crypto from 'node:crypto';
 
@@ -162,9 +162,16 @@ export function createAuthRouter({
         message: 'OTP aapke email par bhej diya gaya hai. Inbox aur Spam folder check karein.'
       });
     } catch (error) {
-      console.error('OTP send failed:', error?.message || error);
+      console.error('[OTP_DIAGNOSTIC] Send OTP failed:', {
+        name: error?.name || 'Error',
+        message: error?.message || 'Unknown error',
+        code: error?.code || null,
+        details: error?.details || null,
+        hint: error?.hint || null
+      });
+
       return res.status(502).json({
-        error: 'Email par OTP nahi bhej saka. SMTP settings check karke dobara try karein.'
+        error: 'OTP send failed. Please try again later.'
       });
     }
   });
