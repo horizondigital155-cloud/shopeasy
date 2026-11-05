@@ -66,10 +66,15 @@ const normalizeEmail = value => String(value || '').trim().toLowerCase();
 const validEmail = value => value.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 const sha = value => crypto.createHash('sha256').update(String(value)).digest('hex');
 const otpHash = (email, otp) => sha(`${email}:${otp}:${JWT_SECRET}`);
-const setSession = (res, payload) => res.cookie('sid', jwt.sign(payload, JWT_SECRET, { expiresIn: '30d' }), {
-  httpOnly: true, sameSite: 'none', secure: true,
-  maxAge: 30 * 24 * 60 * 60 * 1000, path: '/'
-});
+const setSession = (res, payload) => {
+  // Expire any previous host-only sid cookie before issuing a fresh session.
+  res.clearCookie('sid', { path: '/' });
+
+  return res.cookie('sid', jwt.sign(payload, JWT_SECRET, { expiresIn: '30d' }), {
+    httpOnly: true, sameSite: 'none', secure: true,
+    maxAge: 30 * 24 * 60 * 60 * 1000, path: '/'
+  });
+};
 async function sendOtpEmail({ to, subject, text, html }) {
   const clientId = process.env.GMAIL_CLIENT_ID || '';
   const clientSecret = process.env.GMAIL_CLIENT_SECRET || '';
