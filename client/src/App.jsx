@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+﻿import { useEffect, useMemo, useRef, useState } from 'react';
 import { CATEGORY_NAMES } from './categories.js';
 const safeStorageGet = (key, fallback = '') => {
   try {
@@ -252,14 +252,54 @@ function Auth({onDone,onClose}){
       </div>}
     </form>}</div></div>;
 }
+function normalizeProductImageUrl(value){
+ const raw=String(value||'').trim();
+ if(!raw)return '';
+ try{
+  const url=new URL(raw);
+  if(!['http:','https:'].includes(url.protocol))return '';
+  if(url.hostname.toLowerCase()==='drive.google.com'){
+   let id=url.searchParams.get('id')||'';
+   if(!id){
+    const match=url.pathname.match(/\/file\/d\/([^/]+)/);
+    if(match)id=match[1];
+   }
+   if(id)return 'https://drive.google.com/uc?export=view&id='+encodeURIComponent(id);
+  }
+  return url.href;
+ }catch{return ''}
+}
+
 function ProductForm({initial,onSave,onCancel,busy}){
  const [f,setF]=useState(initial||{name:'',category:'',unit:'',price:'',image:'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=900&q=85'});
- return <form className="admin-form" onSubmit={e=>{e.preventDefault();onSave({...f,price:Number(f.price)})}}>
+ const [imageError,setImageError]=useState(false);
+ const preview=normalizeProductImageUrl(f.image);
+
+ useEffect(()=>{setImageError(false)},[preview]);
+
+ return <form className="admin-form" onSubmit={e=>{
+  e.preventDefault();
+  const image=normalizeProductImageUrl(f.image);
+  if(!image){setImageError(true);return;}
+  onSave({...f,image,price:Number(f.price)});
+ }}>
  <label>Product name<input value={f.name} onChange={e=>setF({...f,name:e.target.value})} required maxLength={120}/></label>
  <label>Category<input list="categories" value={f.category} onChange={e=>setF({...f,category:e.target.value})} required maxLength={80}/><datalist id="categories">{CATEGORY_NAMES.map(c=><option key={c} value={c}/>)}</datalist></label>
  <label>Unit / size<input value={f.unit||''} onChange={e=>setF({...f,unit:e.target.value})} placeholder="1 kg, 500 ml"/></label>
  <label>Price (?)<input type="number" min="1" step="1" value={f.price} onChange={e=>setF({...f,price:e.target.value})} required/></label>
- <label>Original image URL<input type="url" value={f.image} onChange={e=>setF({...f,image:e.target.value})} placeholder="https://..." required/><small className="hint">Product save karne ke baad Photo button se apni HD photo upload kar sakte hain.</small></label>
+ <label>Direct image URL
+  <input type="url" value={f.image||''} onChange={e=>setF({...f,image:e.target.value})} placeholder="https://example.com/product.jpg" required/>
+  <small className="hint">Direct image URL paste karein. Google Drive share link bhi supported hai, agar image public access mein hai.</small>
+ </label>
+ <div style={{margin:'10px 0 16px',padding:12,border:'1px solid #dce6df',borderRadius:12,maxWidth:260}}>
+  <b style={{display:'block',marginBottom:8}}>Live image preview</b>
+  {preview&&!imageError
+   ? <img key={preview} src={preview} alt="Product preview" loading="eager" referrerPolicy="no-referrer" onError={()=>setImageError(true)} style={{display:'block',width:'100%',height:170,objectFit:'contain',background:'#f5f5f5',borderRadius:8}}/>
+   : <div style={{height:110,display:'grid',placeItems:'center',background:'#f5f5f5',borderRadius:8,color:'#777',fontSize:13,textAlign:'center',padding:8}}>
+      {imageError?'Image load nahi hui. Direct image URL aur public access check karein.':'Image URL paste karein.'}
+     </div>
+  }
+ </div>
  <div className="form-actions"><button className="btn" disabled={busy}>{busy?'Saving...':'Save product'}</button><button type="button" className="link" onClick={onCancel}>Cancel</button></div>
  </form>;
 }
@@ -1351,4 +1391,5 @@ export default function App(){
  {overlays}
 </div>;</>
 }
+
 
