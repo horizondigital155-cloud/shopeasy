@@ -12,6 +12,7 @@ import rateLimit from 'express-rate-limit';
 import jwt from 'jsonwebtoken';
 
 import crypto from 'node:crypto';
+import multer from 'multer';
 
 
 import { createAuthRouter } from './auth-routes.js';
@@ -75,6 +76,41 @@ const setSession = (res, payload) => {
     maxAge: 30 * 24 * 60 * 60 * 1000, path: '/'
   });
 };
+async function setCustomerSession(req, res, user) {
+  const phone = cleanPhone(user?.phone);
+  if (!validPhone(phone)) throw new Error('Cannot create customer session: invalid phone.');
+
+  // Revoke the previous browser session before issuing a new one.
+  const previousToken = req.cookies?.csid;
+  if (previousToken) {
+    const { error: revokeError } = await supabase
+      .from('customer_sessions')
+      .update({ revoked_at: new Date().toISOString() })
+      .eq('token_hash', sha(previousToken))
+      .is('revoked_at', null);
+    if (revokeError) throw revokeError;
+  }
+
+  const token = crypto.randomBytes(32).toString('hex');
+  const { error } = await supabase.from('customer_sessions').insert({
+    token_hash: sha(token),
+    user_phone: phone
+  });
+
+  if (error) throw error;
+
+  const cookieOptions = {
+    httpOnly: true,
+    sameSite: 'none',
+    secure: true,
+    maxAge: 10 * 365 * 24 * 60 * 60 * 1000,
+    path: '/'
+  };
+
+  res.clearCookie('sid', cookieOptions);
+  res.cookie('csid', token, cookieOptions);
+}
+
 async function sendOtpEmail({ to, subject, text, html }) {
   const clientId = process.env.GMAIL_CLIENT_ID || '';
   const clientSecret = process.env.GMAIL_CLIENT_SECRET || '';
@@ -163,9 +199,58 @@ async function sendOtpEmail({ to, subject, text, html }) {
   }
 }
 
-app.use((req, _res, next) => {
-  try { req.user = jwt.verify(req.cookies.sid || '', JWT_SECRET); }
-  catch { req.user = null; }
+app.use(async (req, _res, next) => {
+  req.user = null;
+
+  try {
+    const customerToken = req.cookies?.csid;
+
+    if (customerToken) {
+      const { data: session, error: sessionError } = await supabase
+        .from('customer_sessions')
+        .select('user_phone')
+        .eq('token_hash', sha(customerToken))
+        .is('revoked_at', null)
+        .maybeSingle();
+
+      if (sessionError) throw sessionError;
+
+      if (session?.user_phone) {
+        const { data: customer, error: customerError } = await supabase
+          .from('users')
+          .select('phone,name,email')
+          .eq('phone', session.user_phone)
+          .maybeSingle();
+
+        if (customerError) throw customerError;
+
+        if (customer) {
+          req.user = {
+            role: 'customer',
+            phone: customer.phone,
+            name: customer.name,
+            email: customer.email || ''
+          };
+        }
+      }
+    }
+
+    // The old JWT cookie remains valid only for Admin and Rider.
+    if (!req.user && req.cookies?.sid) {
+      try {
+        const oldSession = jwt.verify(req.cookies.sid, JWT_SECRET);
+        if (['admin', 'rider'].includes(oldSession?.role)) {
+          req.user = oldSession;
+        }
+      } catch {
+        req.user = null;
+      }
+    }
+  } catch (error) {
+    console.error('[ShopEasy] Session verification failed:', error?.message || error);
+    req.user = null;
+  }
+
   next();
 });
 const needUser = (req, res, next) => req.user?.role === 'customer'
@@ -183,22 +268,155 @@ const safeItems = value => {
 app.get('/api/health', (_req, res) => res.json({ ok: true, app: 'ShopEasy', database: 'supabase' }));
 app.use(createAuthRouter({
   supabase, limit, cleanPhone, validPhone, normalizeEmail, validEmail,
-  otpHash, setSession, sendOtpEmail, JWT_SECRET,
+  otpHash, setSession, setCustomerSession, sendOtpEmail, JWT_SECRET,
   ADMIN_PHONE: process.env.ADMIN_PHONE || '',
   ADMIN_PASS_HASH: process.env.ADMIN_PASS_HASH || ''
 }));
 
 // Public catalogue: preserve all 317 existing Supabase product rows and image URLs.
+const PRODUCT_IMAGE_BUCKET = 'shopeasy-images';
+const productPhotoUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024, files: 1 },
+  fileFilter: (_req, file, cb) => {
+    if (/^image\/(jpeg|png|webp)$/.test(file.mimetype)) return cb(null, true);
+    cb(new Error('Sirf JPG, PNG ya WebP image upload karein.'));
+  }
+});
+
 app.get('/api/products', async (_req, res) => {
   try {
-    const { data, error } = await supabase.from('products')
-      .select('id,category,name,unit,price,image,created,updated,mrp')
-      .order('category', { ascending: true }).order('name', { ascending: true });
+    const [{ data: products, error }, { data: images, error: imageError }] = await Promise.all([
+      supabase.from('products').select('id,category,name,unit,price,image,created,updated,mrp')
+        .order('category', { ascending: true }).order('name', { ascending: true }),
+      supabase.from('product_images').select('product_id,filename')
+    ]);
     if (error) throw error;
-    return res.json((data || []).map(p => ({ ...p, originalImage: p.image || '', hasCustomImage: false })));
+    if (imageError) throw imageError;
+    const custom = new Map((images || []).map(row => {
+      const { data } = supabase.storage.from(PRODUCT_IMAGE_BUCKET).getPublicUrl(row.filename);
+      return [String(row.product_id), data.publicUrl];
+    }));
+    return res.json((products || []).map(p => ({
+      ...p, originalImage: p.image || '', image: custom.get(String(p.id)) || p.image || '',
+      hasCustomImage: custom.has(String(p.id))
+    })));
   } catch (error) {
     console.error('Products API failed:', error?.message || error);
     return res.status(503).json({ error: 'Products load nahi ho paaye. Database connection check karein.' });
+  }
+});
+
+// Admin product CRUD. Images are stored privately from the browser via the server service-role client.
+app.post('/api/admin/products', needAdmin, async (req, res) => {
+  const name = String(req.body?.name || '').trim();
+  const category = String(req.body?.category || '').trim();
+  const unit = String(req.body?.unit || '').trim();
+  const image = String(req.body?.image || '').trim();
+  const price = Number(req.body?.price);
+  const mrp = Number(req.body?.mrp ?? 0);
+  if (!name || !category || !Number.isSafeInteger(price) || price < 1 || !Number.isSafeInteger(mrp) || mrp < 0) {
+    return res.status(400).json({ error: 'Product name, category aur valid whole-number price zaroori hain.' });
+  }
+  if (image && !/^https?:\/\//i.test(image)) return res.status(400).json({ error: 'Image URL valid HTTPS/HTTP URL honi chahiye.' });
+  const now = Date.now();
+  const row = { id: crypto.randomUUID(), name, category, unit, price, image, mrp, created: now, updated: now };
+  try {
+    const { data, error } = await supabase.from('products').insert(row).select('*').single();
+    if (error) throw error;
+    return res.status(201).json({ ...data, originalImage: data.image || '', hasCustomImage: false });
+  } catch (error) {
+    console.error('Admin product create failed:', error?.message || error);
+    return res.status(503).json({ error: 'Product save nahi hua. Supabase table/permissions check karein.' });
+  }
+});
+
+app.put('/api/admin/products/:id', needAdmin, async (req, res) => {
+  const id = String(req.params.id || '').trim();
+  const name = String(req.body?.name || '').trim();
+  const category = String(req.body?.category || '').trim();
+  const unit = String(req.body?.unit || '').trim();
+  const image = String(req.body?.image || '').trim();
+  const price = Number(req.body?.price);
+  const mrp = Number(req.body?.mrp ?? 0);
+  if (!id || !name || !category || !Number.isSafeInteger(price) || price < 1 || !Number.isSafeInteger(mrp) || mrp < 0) {
+    return res.status(400).json({ error: 'Product details ya price invalid hain.' });
+  }
+  if (image && !/^https?:\/\//i.test(image)) return res.status(400).json({ error: 'Image URL valid HTTP/HTTPS honi chahiye.' });
+  try {
+    const { data, error } = await supabase.from('products').update({ name, category, unit, price, image, mrp, updated: Date.now() }).eq('id', id).select('*').maybeSingle();
+    if (error) throw error;
+    if (!data) return res.status(404).json({ error: 'Product nahi mila.' });
+    return res.json({ ...data, originalImage: data.image || '', hasCustomImage: false });
+  } catch (error) {
+    console.error('Admin product update failed:', error?.message || error);
+    return res.status(503).json({ error: 'Product update nahi hua.' });
+  }
+});
+
+app.delete('/api/admin/products/:id', needAdmin, async (req, res) => {
+  const id = String(req.params.id || '').trim();
+  if (!id) return res.status(400).json({ error: 'Product ID invalid hai.' });
+  try {
+    const { data: imageRow, error: imageReadError } = await supabase.from('product_images').select('filename').eq('product_id', id).maybeSingle();
+    if (imageReadError) throw imageReadError;
+    const { data, error } = await supabase.from('products').delete().eq('id', id).select('id').maybeSingle();
+    if (error) throw error;
+    if (!data) return res.status(404).json({ error: 'Product nahi mila.' });
+    await supabase.from('product_images').delete().eq('product_id', id);
+    if (imageRow?.filename) await supabase.storage.from(PRODUCT_IMAGE_BUCKET).remove([imageRow.filename]);
+    return res.json({ ok: true, id });
+  } catch (error) {
+    console.error('Admin product delete failed:', error?.message || error);
+    return res.status(503).json({ error: 'Product delete nahi hua.' });
+  }
+});
+
+app.post('/api/admin/products/:id/photo', needAdmin, (req, res, next) => {
+  productPhotoUpload.single('photo')(req, res, error => error ? res.status(400).json({ error: error.message }) : next());
+}, async (req, res) => {
+  const id = String(req.params.id || '').trim();
+  if (!req.file) return res.status(400).json({ error: 'Product photo select karein.' });
+  const extension = req.file.mimetype === 'image/png' ? 'png' : req.file.mimetype === 'image/webp' ? 'webp' : 'jpg';
+  const filename = `products/${id}/${crypto.randomUUID()}.${extension}`;
+  try {
+    const { data: product, error: productError } = await supabase.from('products').select('id').eq('id', id).maybeSingle();
+    if (productError) throw productError;
+    if (!product) return res.status(404).json({ error: 'Product nahi mila.' });
+    const { error: uploadError } = await supabase.storage.from(PRODUCT_IMAGE_BUCKET).upload(filename, req.file.buffer, { contentType: req.file.mimetype, upsert: false });
+    if (uploadError) throw uploadError;
+    const { data: oldImage, error: oldReadError } = await supabase.from('product_images').select('filename').eq('product_id', id).maybeSingle();
+    if (oldReadError) throw oldReadError;
+    await supabase.from('product_images').delete().eq('product_id', id);
+    const { error: insertError } = await supabase.from('product_images').insert({ product_id: id, filename });
+    if (insertError) {
+      await supabase.storage.from(PRODUCT_IMAGE_BUCKET).remove([filename]);
+      throw insertError;
+    }
+    if (oldImage?.filename) await supabase.storage.from(PRODUCT_IMAGE_BUCKET).remove([oldImage.filename]);
+    const { data: publicData } = supabase.storage.from(PRODUCT_IMAGE_BUCKET).getPublicUrl(filename);
+    return res.json({ ok: true, image: publicData.publicUrl, filename });
+  } catch (error) {
+    console.error('Admin product photo upload failed:', error?.message || error);
+    return res.status(503).json({ error: 'Photo upload nahi hui. Supabase shopeasy-images bucket check karein.' });
+  }
+});
+
+app.delete('/api/admin/products/:id/photo', needAdmin, async (req, res) => {
+  const id = String(req.params.id || '').trim();
+  try {
+    const { data: oldImage, error: readError } = await supabase.from('product_images').select('filename').eq('product_id', id).maybeSingle();
+    if (readError) throw readError;
+    const { error } = await supabase.from('product_images').delete().eq('product_id', id);
+    if (error) throw error;
+    if (oldImage?.filename) {
+      const { error: removeError } = await supabase.storage.from(PRODUCT_IMAGE_BUCKET).remove([oldImage.filename]);
+      if (removeError) throw removeError;
+    }
+    return res.json({ ok: true });
+  } catch (error) {
+    console.error('Admin product photo reset failed:', error?.message || error);
+    return res.status(503).json({ error: 'Custom photo remove nahi hui.' });
   }
 });
 
