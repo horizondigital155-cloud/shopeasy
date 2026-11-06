@@ -41,6 +41,14 @@ export function createAuthRouter({
       admin: true
     };
 
+    // Remove the previous customer session cookie before issuing admin session.
+    res.clearCookie('csid', {
+      httpOnly: true,
+      sameSite: 'none',
+      secure: true,
+      path: '/'
+    });
+
     setSession(res, user);
     return res.json(user);
   });
