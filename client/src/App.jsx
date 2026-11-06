@@ -313,7 +313,7 @@ function Orders({user,reload}){
  return <div className="orders">{err&&<p className="error">{err}</p>}{rows.map(o=><article className="order" key={o.id}>
  <header><b>Order #{o.id}</b><span>{new Date(o.created).toLocaleString('en-IN')}</span></header>
  {user.role==='admin'&&<p className="meta">{o.name||o.account_name} - {o.phone}<br/>{o.address}</p>}
- <ul>{o.items.map((i,index)=><li key={`${i.id}-${index}`}><span>{i.name}{i.unit||i.product?.unit ? ` ? ${i.unit||i.product?.unit}` : ""} . Qty: {i.qty??1}</span><span>{rupee(Number(i.price??i.product?.price??0)*Number(i.qty??1))}</span></li>)}</ul>
+ <ul>{o.items.map((i,index)=><li key={`${i.id}-${index}`}><span>{i.name}{i.unit||i.product?.unit ? ` · ${i.unit||i.product?.unit}` : ""} . Qty: {i.qty??1}</span><span>{rupee(Number(i.price??i.product?.price??0)*Number(i.qty??1))}</span></li>)}</ul>
  {user.role==='customer'&&<p className="meta">{String(o.status).toLowerCase()==='placed'?'Items are placed. Your order has been placed. Please wait for confirmation.':String(o.status).toLowerCase()==='assigned'?'Your order is confirmed. Please keep your phone available.':String(o.status).toLowerCase()==='picked_up'?'Your order is on the way. Please keep your phone available.':String(o.status).toLowerCase()==='delivered'?'Order delivered successfully. Thank you for shopping with ShopEasy!':String(o.status).toLowerCase()==='cancelled'?`Order cancelled. Reason: ${o.cancellation_reason||'Not specified'}`:'Order status: '+o.status}</p>}
  <footer><span>{o.payment} - {o.payment_status} - {o.status}</span><b>{rupee(o.total)}</b>
  {user.role==='customer'&&['placed','assigned'].includes(String(o.status).toLowerCase())&&<button className="link danger" onClick={()=>cancelOrder(o)}>Cancel Order</button>}
