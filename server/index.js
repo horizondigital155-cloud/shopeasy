@@ -1,4 +1,4 @@
-import { google } from 'googleapis';
+﻿import { google } from 'googleapis';
 import 'dotenv/config';
 
 import express from 'express';
@@ -298,8 +298,10 @@ app.get('/api/products', async (_req, res) => {
       return [String(row.product_id), data.publicUrl];
     }));
     return res.json((products || []).map(p => ({
-      ...p, originalImage: p.image || '', image: custom.get(String(p.id)) || p.image || '',
-      hasCustomImage: custom.has(String(p.id))
+      ...p,
+      originalImage: p.image || '',
+      image: p.image || custom.get(String(p.id)) || '',
+      hasCustomImage: !p.image && custom.has(String(p.id))
     })));
   } catch (error) {
     console.error('Products API failed:', error?.message || error);
@@ -657,3 +659,4 @@ if (process.env.VERCEL !== '1') {
   });
 }
 export default app;
+
