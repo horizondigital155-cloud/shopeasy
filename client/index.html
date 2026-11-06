@@ -8,7 +8,84 @@
     <link rel="icon" type="image/png" sizes="192x192" href="/shopeasy-icon-192.png" />
     <link rel="apple-touch-icon" href="/shopeasy-icon-192.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
-    <title>ShopEasy — Merta Road</title>
+    <title>ShopEasy â€” Merta Road</title>
   </head>
-  <body><div id="root"></div><script type="module" src="/src/main.jsx"></script></body>
+  <body>
+<style id="shopeasy-startup-style">
+  html, body, #root {
+    min-height: 100%;
+  }
+  #shopeasy-startup-splash {
+    position: fixed;
+    inset: 0;
+    z-index: 2147483647;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #1769E0;
+    opacity: 1;
+    visibility: visible;
+    transition: opacity .55s ease, visibility .55s ease;
+  }
+  #shopeasy-startup-splash img {
+    display: block;
+    width: min(76vw, 340px);
+    height: min(76vw, 340px);
+    object-fit: contain;
+    animation: shopeasyLogoEnter .9s cubic-bezier(.2,.8,.2,1) both;
+    filter: drop-shadow(0 14px 25px rgba(0,0,0,.22));
+  }
+  #shopeasy-startup-splash::after {
+    content: "";
+    position: absolute;
+    bottom: max(10vh, 55px);
+    width: 42px;
+    height: 5px;
+    border-radius: 20px;
+    background: rgba(255,255,255,.28);
+    box-shadow: 0 0 0 1px rgba(255,255,255,.08);
+    animation: shopeasyLoading 1s ease-in-out infinite alternate;
+  }
+  #shopeasy-startup-splash.hide {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+  @keyframes shopeasyLogoEnter {
+    from { opacity: 0; transform: scale(.78); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  @keyframes shopeasyLoading {
+    from { transform: scaleX(.65); opacity: .55; }
+    to { transform: scaleX(1.35); opacity: 1; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #shopeasy-startup-splash img,
+    #shopeasy-startup-splash::after {
+      animation: none;
+    }
+  }
+</style>
+<div id="shopeasy-startup-splash" aria-label="ShopEasy loading">
+  <img src="/shopeasy-logo-transparent.png" alt="ShopEasy" />
+</div><div id="root"></div><script type="module" src="/src/main.jsx"></script><script id="shopeasy-startup-script">
+(function () {
+  var splash = document.getElementById('shopeasy-startup-splash');
+  if (!splash) return;
+  var dismissed = false;
+  function hideSplash() {
+    if (dismissed) return;
+    dismissed = true;
+    splash.classList.add('hide');
+    window.setTimeout(function () {
+      if (splash.parentNode) splash.parentNode.removeChild(splash);
+    }, 650);
+  }
+  window.addEventListener('load', function () {
+    window.setTimeout(hideSplash, 1100);
+  }, { once: true });
+  window.setTimeout(hideSplash, 4500);
+})();
+</script>
+</body>
 </html>
