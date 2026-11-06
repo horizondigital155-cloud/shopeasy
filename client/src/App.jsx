@@ -127,11 +127,11 @@ function Pic({f,k,x,className='',icon='bag',s=22}){
 
 /* Sidebar / category strip. [name, image slug, backend categories, pastel] -> /img/cat-<slug>.jpg */
 const NAV=[
- ['Fast Food','fast-food',['Pizza','Burgers','Sandwiches','Momos','Noodles','Pasta','Fries','Rolls & Wraps','Fried Chicken','Garlic Bread','Fast Food Combos'],'#ffe1d6'],
+ ['Fast Food','fast-food',['Pizza','Burgers','Sandwiches','Momos','Noodles','Pasta','Fries','Rolls & Wraps','Fried Chicken','Garlic Bread','Fast Food Combos','Fast Food & Ready-to-Eat'],'#ffe1d6'],
  ['Fruits & Vegetables','fruits-veg',['Fruits','Vegetables'],'#e6f4dc'],
  ['Dairy & Bakery','dairy-bakery',['Dairy & Eggs','Bakery','Frozen Foods'],'#f6eadb'],
  ['Atta, Rice & Dals','atta-rice-dals',['Staples'],'#f7ecd6'],
- ['Masala & Spices','masala-spices',['Spices'],'#f6dfd8'],
+ ['Masala & Spices','masala-spices',['Spices','Masalas & Spices'],'#f6dfd8'],
  ['Cooking Essentials','cooking-essentials',['Oils'],'#fdf0c9'],
  ['Snacks & Beverages','snacks-beverages',['Snacks','Beverages'],'#fde0e0'],
  ['Personal Care','personal-care',['Personal Care'],'#dff3e4'],
@@ -141,9 +141,11 @@ const NAV=[
  ['Stationery & Office','stationery',[],'#e9ecf4'],
  ['Electronics & Accessories','electronics',[],'#e8e8ee'],
  ['Kitchen & Dining','kitchen-dining',[],'#ececec'],
- ['Beauty & Cosmetics','beauty-cosmetics',['Beauty & Care'],'#fbe0e6'],
+ ['Beauty & Cosmetics','beauty-cosmetics',['Beauty & Care','Cosmetics & Beauty','Beauty & Cosmetics'],'#fbe0e6'],
  ['Festive & Gifts','gifts',[],'#fde5d6'],
- ['Fashion & Accessories','fashion',[],'#dde6f3'],
+ ['Groceries & Staples','atta-rice-dals',['Groceries & Staples'],'#f7ecd6'],
+  ['Personal Care & Home','personal-care',['Personal Care & Home'],'#dff3e4'],
+  ['Fashion & Accessories','fashion',[],'#dde6f3'],
 ];
 const SHORT={'Fast Food':'Fast Food','Fruits & Vegetables':'Fruits & Vegetables','Dairy & Bakery':'Dairy & Bakery','Atta, Rice & Dals':'Atta, Rice & Dals','Masala & Spices':'Masala & Spices','Cooking Essentials':'Cooking Essentials','Snacks & Beverages':'Snacks & Beverages','Personal Care':'Personal Care','Home Care & Cleaning':'Home Care','Baby Care':'Baby Care','Health & Wellness':'Health & Wellness','Stationery & Office':'Stationery','Electronics & Accessories':'Electronics','Kitchen & Dining':'Kitchen & Dining','Beauty & Cosmetics':'Beauty & Cosmetics','Festive & Gifts':'Gifts','Fashion & Accessories':'Fashion',};
 /* [name, subtitle, gradient, image slug -> /img/hl-<slug>.jpg, button colour] */
@@ -313,7 +315,7 @@ function Orders({user,reload}){
  return <div className="orders">{err&&<p className="error">{err}</p>}{rows.map(o=><article className="order" key={o.id}>
  <header><b>Order #{o.id}</b><span>{new Date(o.created).toLocaleString('en-IN')}</span></header>
  {user.role==='admin'&&<p className="meta">{o.name||o.account_name} - {o.phone}<br/>{o.address}</p>}
- <ul>{o.items.map((i,index)=><li key={`${i.id}-${index}`}><span>{i.name}{i.unit||i.product?.unit ? ` · ${i.unit||i.product?.unit}` : ""} . Qty: {i.qty??1}</span><span>{rupee(Number(i.price??i.product?.price??0)*Number(i.qty??1))}</span></li>)}</ul>
+ <ul>{o.items.map((i,index)=><li key={`${i.id}-${index}`}><span>{i.name}{i.unit||i.product?.unit ? ` Â· ${i.unit||i.product?.unit}` : ""} . Qty: {i.qty??1}</span><span>{rupee(Number(i.price??i.product?.price??0)*Number(i.qty??1))}</span></li>)}</ul>
  {user.role==='customer'&&<p className="meta">{String(o.status).toLowerCase()==='placed'?'Items are placed. Your order has been placed. Please wait for confirmation.':String(o.status).toLowerCase()==='assigned'?'Your order is confirmed. Please keep your phone available.':String(o.status).toLowerCase()==='picked_up'?'Your order is on the way. Please keep your phone available.':String(o.status).toLowerCase()==='delivered'?'Order delivered successfully. Thank you for shopping with ShopEasy!':String(o.status).toLowerCase()==='cancelled'?`Order cancelled. Reason: ${o.cancellation_reason||'Not specified'}`:'Order status: '+o.status}</p>}
  <footer><span>{o.payment} - {o.payment_status} - {o.status}</span><b>{rupee(o.total)}</b>
  {user.role==='customer'&&['placed','assigned'].includes(String(o.status).toLowerCase())&&<button className="link danger" onClick={()=>cancelOrder(o)}>Cancel Order</button>}
@@ -449,7 +451,7 @@ function MobileApp(P){
  const toTab=t=>{setView('shop');setQ('');setSOpen(false);setTab(t);if(t!=='cats')setMcat(null);top()};
  const openCat=n=>{setView('shop');setQ('');setSOpen(false);setTab('cats');setMcat(n);top()};
  const closeSearch=()=>{setSOpen(false);setQ('')};
- const dealsAll=useMemo(()=>products,[products]);
+ const dealsAll=useMemo(()=>products.filter(p=>offPct(p)>0),[products]);
 
  const card=p=>{const off=offPct(p),n=cart[p.id]||0;return <article className="mpc" key={p.id}>
   <div className="mpc-img"><img src={resolveImageUrl(p.image||p.originalImage)} alt={p.name} loading="lazy" onError={e=>{e.currentTarget.style.visibility='hidden'}}/>
@@ -796,7 +798,7 @@ function ShopEasyMertaNotice() {
       isIOS
         ? 'Safari ke Share button par tap karein, phir "Add to Home Screen" chunein.'
         : isAndroid
-          ? 'Chrome ke ⋮ menu mein "Install app" ya "Add to Home screen" chunein.'
+          ? 'Chrome ke â‹® menu mein "Install app" ya "Add to Home screen" chunein.'
           : 'Browser ke address bar ke install icon ya browser menu mein "Install ShopEasy" chunein.'
     );
   };
@@ -1196,5 +1198,3 @@ export default function App(){
  {overlays}
 </div>;</>
 }
-
-
