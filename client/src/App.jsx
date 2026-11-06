@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { CATEGORY_NAMES } from './categories.js';
 const safeStorageGet = (key, fallback = '') => {
   try {
@@ -796,7 +796,7 @@ function ShopEasyMertaNotice() {
       isIOS
         ? 'Safari ke Share button par tap karein, phir "Add to Home Screen" chunein.'
         : isAndroid
-          ? 'Chrome ke â‹® menu mein "Install app" ya "Add to Home screen" chunein.'
+          ? 'Chrome ke ⋮ menu mein "Install app" ya "Add to Home screen" chunein.'
           : 'Browser ke address bar ke install icon ya browser menu mein "Install ShopEasy" chunein.'
     );
   };
@@ -1041,7 +1041,7 @@ export default function App(){
 
 
  const overlays=<>
- {cartOpen&&<div className="overlay" onClick={()=>setCartOpen(false)}><aside className="drawer" onClick={e=>e.stopPropagation()}><header className="cart-header"><button type="button" className="cart-home-btn" onClick={()=>{setCartOpen(false);setView('shop');}}><span aria-hidden="true">âŒ‚</span> Home</button><h2>Your cart</h2><button className="link" onClick={()=>setCartOpen(false)}>Close</button></header>{!lines.length?<>
+ {cartOpen&&<div className="overlay" onClick={()=>setCartOpen(false)}><aside className="drawer" onClick={e=>e.stopPropagation()}><header className="cart-header"><button type="button" className="cart-home-btn" onClick={()=>{setCartOpen(false);setView('shop');}}><Ic n="home" s={20}/> Home</button><h2>Your cart</h2><button className="link" onClick={()=>setCartOpen(false)}>Close</button></header>{!lines.length?<>
 <p className="empty">Cart khaali hai.</p>
 <section style={{marginTop:20,paddingTop:16,borderTop:"1px solid #e5e7eb"}}>
   <h3 style={{fontSize:18,marginBottom:6}}>Budget Treats {"\u2728"}</h3>
