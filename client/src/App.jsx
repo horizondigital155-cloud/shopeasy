@@ -746,7 +746,7 @@ function ServiceAdmin({toast}) {
 }
 
 function ShopEasyMertaNotice() {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   const [installPrompt, setInstallPrompt] = useState(null);
   const [installed, setInstalled] = useState(() =>
     typeof window !== 'undefined' &&
