@@ -1,0 +1,26 @@
+{
+  "id": "/",
+  "name": "ShopEasy",
+  "short_name": "ShopEasy",
+  "description": "ShopEasy local shopping and delivery in Merta Road, Rajasthan.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#123b2a",
+  "icons": [
+    {
+      "src": "/shopeasy-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/shopeasy-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

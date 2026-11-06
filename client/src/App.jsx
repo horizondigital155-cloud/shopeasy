@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+﻿import { useEffect, useMemo, useRef, useState } from 'react';
 import { CATEGORY_NAMES } from './categories.js';
 const safeStorageGet = (key, fallback = '') => {
   try {
@@ -746,16 +746,75 @@ function ServiceAdmin({toast}) {
 }
 
 function ShopEasyMertaNotice() {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState(null);
+  const [installed, setInstalled] = useState(() =>
+    typeof window !== 'undefined' &&
+    (window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone === true)
+  );
+  const [helpText, setHelpText] = useState('');
+
+  useEffect(() => {
+    const onBeforeInstall = (event) => {
+      event.preventDefault();
+      setInstallPrompt(event);
+    };
+    const onInstalled = () => {
+      setInstalled(true);
+      setInstallPrompt(null);
+      setOpen(false);
+      setHelpText('');
+    };
+    window.addEventListener('beforeinstallprompt', onBeforeInstall);
+    window.addEventListener('appinstalled', onInstalled);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', onBeforeInstall);
+      window.removeEventListener('appinstalled', onInstalled);
+    };
+  }, []);
+
+  const startInstall = async () => {
+    if (installed) return;
+    if (installPrompt) {
+      try {
+        await installPrompt.prompt();
+        const choice = await installPrompt.userChoice;
+        if (choice?.outcome === 'accepted') {
+          setOpen(false);
+          setInstallPrompt(null);
+        }
+      } catch {
+        setOpen(true);
+        setHelpText('Browser menu se "Install app" ya "Add to Home screen" select karein.');
+      }
+      return;
+    }
+    setOpen(true);
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const isAndroid = /android/i.test(navigator.userAgent);
+    setHelpText(
+      isIOS
+        ? 'Safari ke Share button par tap karein, phir "Add to Home Screen" chunein.'
+        : isAndroid
+          ? 'Chrome ke â‹® menu mein "Install app" ya "Add to Home screen" chunein.'
+          : 'Browser ke address bar ke install icon ya browser menu mein "Install ShopEasy" chunein.'
+    );
+  };
 
   return (
     <>
       <div className="shopeasy-merta-banner">
         <span aria-hidden="true">{"\u{1F69A}"}</span>
         Delivery available only in Merta Road, Nagaur, Rajasthan.
+        {!installed && (
+          <button type="button" className="shopeasy-banner-install" onClick={startInstall}>
+            Download App
+          </button>
+        )}
+        {installed && <span className="shopeasy-installed-label">App Installed</span>}
       </div>
 
-      {open && (
+      {open && !installed && (
         <div className="shopeasy-download-overlay">
           <section
             className="shopeasy-download-dialog"
@@ -765,30 +824,20 @@ function ShopEasyMertaNotice() {
           >
             <img
               className="shopeasy-download-icon"
-              src="/shopeasy-icon.png"
+              src="/shopeasy-icon-512.png"
               alt="ShopEasy"
               onError={(e) => { e.currentTarget.style.display = 'none'; }}
             />
             <h2 id="shopeasy-download-title">ShopEasy</h2>
-            <p>
-              Shop easily in Merta Road. Install the ShopEasy app
-              for a convenient shopping experience.
-            </p>
+            <p>Install ShopEasy on your phone for quick access from your Home Screen.</p>
+            {helpText && <p className="shopeasy-install-help">{helpText}</p>}
             <div className="shopeasy-download-actions">
-              <button
-                type="button"
-                className="shopeasy-cancel"
-                onClick={() => setOpen(false)}
-              >
-                Cancel
+              <button type="button" className="shopeasy-cancel" onClick={() => setOpen(false)}>
+                Not now
               </button>
-              <a
-                className="shopeasy-download"
-                href="/downloads/ShopEasy.apk"
-                download="ShopEasy.apk"
-              >
-                Download App
-              </a>
+              <button type="button" className="shopeasy-download" onClick={startInstall}>
+                {installPrompt ? 'Install ShopEasy' : 'How to Install'}
+              </button>
             </div>
           </section>
         </div>
@@ -992,7 +1041,7 @@ export default function App(){
 
 
  const overlays=<>
- {cartOpen&&<div className="overlay" onClick={()=>setCartOpen(false)}><aside className="drawer" onClick={e=>e.stopPropagation()}><header className="cart-header"><button type="button" className="cart-home-btn" onClick={()=>{setCartOpen(false);setView('shop');}}><span aria-hidden="true">⌂</span> Home</button><h2>Your cart</h2><button className="link" onClick={()=>setCartOpen(false)}>Close</button></header>{!lines.length?<>
+ {cartOpen&&<div className="overlay" onClick={()=>setCartOpen(false)}><aside className="drawer" onClick={e=>e.stopPropagation()}><header className="cart-header"><button type="button" className="cart-home-btn" onClick={()=>{setCartOpen(false);setView('shop');}}><span aria-hidden="true">âŒ‚</span> Home</button><h2>Your cart</h2><button className="link" onClick={()=>setCartOpen(false)}>Close</button></header>{!lines.length?<>
 <p className="empty">Cart khaali hai.</p>
 <section style={{marginTop:20,paddingTop:16,borderTop:"1px solid #e5e7eb"}}>
   <h3 style={{fontSize:18,marginBottom:6}}>Budget Treats {"\u2728"}</h3>
