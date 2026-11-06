@@ -235,11 +235,11 @@ app.use(async (req, _res, next) => {
       }
     }
 
-    // The old JWT cookie remains valid only for Admin and Rider.
+    // Legacy JWT cookie is reserved for Admin only; Rider authentication is retired.
     if (!req.user && req.cookies?.sid) {
       try {
         const oldSession = jwt.verify(req.cookies.sid, JWT_SECRET);
-        if (['admin', 'rider'].includes(oldSession?.role)) {
+        if (oldSession?.role === 'admin') {
           req.user = oldSession;
         }
       } catch {

@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { CATEGORY_NAMES } from './categories.js';
 const safeStorageGet = (key, fallback = '') => {
   try {
@@ -66,7 +66,6 @@ const IC={
  yt:'<rect x="2" y="5" width="20" height="14" rx="4"/><path d="M10 9l5 3-5 3z"/>',
  x:'<path d="M4 4l16 16M20 4L4 20"/>',
  in:'<path d="M6 9v10M6 5v.5M11 19v-10M11 13a4 4 0 0 1 8 0v6"/>',
- rider:'<circle cx="6" cy="17" r="3"/><circle cx="18" cy="17" r="3"/><path d="M6 17h5l3-7h3l1 7M9 10h3"/>',
  bag:'<path d="M5 8h14l-1 12H6zM9 8V6a3 3 0 0 1 6 0v2"/>',
  gift:'<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v9h14v-9M12 8v13M12 8c-2 0-4-1-4-3a2 2 0 0 1 4 0 2 2 0 0 1 4 0c0 2-2 3-4 3z"/>',
  phone:'<rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/>',
@@ -186,71 +185,50 @@ const offPct=p=>p.mrp&&Number(p.mrp)>Number(p.price)?Math.round((1-p.price/p.mrp
 function Logo(){return <svg className="logo" viewBox="0 0 40 40" aria-hidden="true"><rect width="40" height="40" rx="10" fill="#16834a"/><path d="M7 10h4l3 14h14l3-10H13" fill="none" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"/><path d="M15 15h14M16 19h12" stroke="#ffc857" strokeWidth="2" strokeLinecap="round"/><circle cx="17" cy="30" r="2.2" fill="#fff"/><circle cx="27" cy="30" r="2.2" fill="#fff"/></svg>}
 function Auth({onDone,onClose}){
  const [mode,setMode]=useState('login');
- const [f,setF]=useState({email:'',phone:'',name:'',otp:'',password:''});
- const [err,setErr]=useState('');
- const [info,setInfo]=useState('');
- const [busy,setBusy]=useState(false);
- const actionLock=useRef(false);
- const [sent,setSent]=useState(false);
+ const [f,setF]=useState({email:'',phone:'',name:'',otp:'',password:'',confirm:''});
+ const [sent,setSent]=useState(false),[err,setErr]=useState(''),[info,setInfo]=useState(''),[busy,setBusy]=useState(false);
+ const lock=useRef(false);
  const set=k=>e=>setF(old=>({...old,[k]:e.target.value}));
- const run=fn=>async e=>{e.preventDefault();if(actionLock.current)return;actionLock.current=true;setErr('');setInfo('');setBusy(true);try{await fn()}catch(x){setErr(x.message)}finally{actionLock.current=false;setBusy(false)}};
- const changeMode=m=>{setMode(m);setErr('');setInfo('');setSent(false);setF(old=>({...old,otp:'',password:''}))};
+ const run=fn=>async e=>{e.preventDefault();if(lock.current)return;lock.current=true;setBusy(true);setErr('');setInfo('');try{await fn()}catch(x){setErr(x.message||'Request failed')}finally{lock.current=false;setBusy(false)}};
+ const changeMode=m=>{setMode(m);setSent(false);setErr('');setInfo('');setF({email:'',phone:'',name:'',otp:'',password:'',confirm:''})};
  const sendOtp=run(async()=>{
-   const payload={email:f.email,purpose:mode==='register'?'register':'login'};
-   if(mode==='register'){payload.name=f.name;payload.phone=f.phone}
-   const result=await api('/auth/send-otp','POST',payload);
-   setSent(true);setInfo(result.message||'OTP bhej diya gaya hai.');
+  if(mode==='register'&&f.password!==f.confirm)throw new Error('Password aur confirm password match nahi karte.');
+  if(mode!=='register'&&mode!=='forgot')return;
+  const payload=mode==='register'?{purpose:'register',name:f.name,phone:f.phone,email:f.email}:{purpose:'reset',phone:f.phone};
+  const result=await api('/auth/send-otp','POST',payload);setSent(true);setInfo(result.message||'OTP bhej diya gaya hai.');
  });
-  const verifyOtp=run(async()=>{
-    const result=await api('/auth/verify-otp','POST',{
-      email:f.email,
-      otp:f.otp,
-      purpose:mode==='register'?'register':'login'
-    });
-
-    if(!result || result.role!=='customer'){
-      throw new Error('Customer login response invalid hai.');
-    }
-
-    const session=await api('/me');
-
-    if(!session || session.role!=='customer'){
-      throw new Error('OTP verify hua, lekin Customer Session confirm nahi hui. Dobara login karein.');
-    }
-
-    await onDone(session);
-  });
- const riderLogin=run(async()=>{
-   const result=await api('/rider/login','POST',{phone:f.phone,password:f.password});
-   await onDone(result);
+ const submitOtp=run(async()=>{
+  if(f.password!==f.confirm)throw new Error('Password aur confirm password match nahi karte.');
+  const result=await api('/auth/verify-otp','POST',{purpose:mode==='register'?'register':'reset',email:f.email,phone:f.phone,otp:f.otp,password:f.password});
+  if(mode==='register'){
+   const session=await api('/me');if(session?.role!=='customer')throw new Error('Account bana, lekin login session verify nahi hui. Dobara login karein.');
+   await onDone(session);
+  }else{setInfo(result.message||'Password update ho gaya. Ab login karein.');setMode('login');setSent(false);setF(old=>({...old,password:'',confirm:'',otp:''}));}
  });
- return <div className="overlay" onClick={onClose}><div className="sheet" onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Account login">
-  <div className="tabs">
-   <button type="button" className={mode==='login'?'on':''} onClick={()=>changeMode('login')}>Email Login</button>
-   <button type="button" className={mode==='register'?'on':''} onClick={()=>changeMode('register')}>Sign up</button>
-   <button type="button" className={mode==='rider'?'on':''} onClick={()=>changeMode('rider')}>Rider</button>
-  </div>
-  {mode==='rider'?<form onSubmit={riderLogin}>
-      <label>Rider mobile number<input inputMode="numeric" maxLength={10} value={f.phone} onChange={set('phone')} required autoComplete="tel" pattern="[6-9][0-9]{9}" title="10 digit Indian mobile number"/></label>
-      <label>Password<input type="password" value={f.password} onChange={set('password')} required autoComplete="current-password"/></label>
-      {err&&<p className="err">{err}</p>}
-      <button className="btn" disabled={busy}>{busy?'Please wait...':'Rider login'}</button>
-    </form>:<form onSubmit={sent?verifyOtp:sendOtp}>
-      {mode==='register'&&<><label>Full name<input value={f.name} onChange={set('name')} required maxLength={60} autoComplete="name" disabled={sent}/></label><label>Mobile number<input inputMode="numeric" maxLength={10} value={f.phone} onChange={set('phone')} required autoComplete="tel" pattern="[6-9][0-9]{9}" title="10 digit Indian mobile number" disabled={sent}/></label></>}
-      <label>Email address<input type="email" value={f.email} onChange={set('email')} required autoComplete="email" maxLength={254} placeholder="you@example.com" disabled={sent}/></label>
-      {sent&&<label>6-digit OTP<input inputMode="numeric" value={f.otp} onChange={set('otp')} required pattern="[0-9]{6}" maxLength={6} autoComplete="one-time-code" placeholder="Enter OTP"/></label>}
-      {info&&<p className="hint">{info}</p>}
-      {err&&<p className="err">{err}</p>}
-      <button className="btn" disabled={busy}>{busy?'Please wait...':sent?'Verify OTP':'Send OTP'}</button>
-      {sent&&<button type="button" className="link" onClick={()=>{setSent(false);setInfo('');setF(old=>({...old,otp:''}))}}>Change email / try again</button>}
-      <p className="hint">{mode==='register'?'Email verify hone ke baad account create hoga.':'Email par OTP bhejkar login karein.'} OTP 5 minutes tak valid hai.</p>
-      {mode==='login'&&<div className="customer-login-note">
-        <strong>Customer Login</strong>
-        <span>Are you a customer? Login here to shop with ShopEasy.</span>
-        <b>Customers can login here.</b>
-        <small>Enter your email address and verify using OTP.</small>
-      </div>}
-    </form>}</div></div>;
+ const login=run(async()=>{
+  const result=await api('/auth/login','POST',{phone:f.phone,password:f.password});
+  if(result?.role!=='customer')throw new Error('Customer login response invalid hai.');
+  const session=await api('/me');if(session?.role!=='customer')throw new Error('Customer session confirm nahi hui.');
+  await onDone(session);
+ });
+ return <div className="overlay" onClick={onClose}><div className="sheet" onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Customer account">
+  <div className="tabs"><button type="button" className={mode==='login'?'on':''} onClick={()=>changeMode('login')}>Login</button><button type="button" className={mode==='register'?'on':''} onClick={()=>changeMode('register')}>Sign up</button><button type="button" className={mode==='forgot'?'on':''} onClick={()=>changeMode('forgot')}>Forgot Password</button></div>
+  {mode==='login'?<form onSubmit={login}>
+   <label>Mobile number<input inputMode="numeric" maxLength={10} value={f.phone} onChange={set('phone')} required autoComplete="tel" pattern="[6-9][0-9]{9}" title="10 digit Indian mobile number"/></label>
+   <label>Password<input type="password" value={f.password} onChange={set('password')} required minLength={8} maxLength={72} autoComplete="current-password"/></label>
+   {info&&<p className="hint">{info}</p>}{err&&<p className="err">{err}</p>}
+   <button className="btn" disabled={busy}>{busy?'Please wait...':'Login'}</button>
+   <button type="button" className="link" onClick={()=>changeMode('forgot')}>Forgot Password?</button>
+  </form>:<form onSubmit={sent?submitOtp:sendOtp}>
+   {mode==='register'&&<><label>Full name<input value={f.name} onChange={set('name')} required maxLength={60} autoComplete="name" disabled={sent}/></label><label>Mobile number<input inputMode="numeric" maxLength={10} value={f.phone} onChange={set('phone')} required autoComplete="tel" pattern="[6-9][0-9]{9}" title="10 digit Indian mobile number" disabled={sent}/></label><label>Email address<input type="email" value={f.email} onChange={set('email')} required autoComplete="email" maxLength={254} disabled={sent}/></label></>}
+   {mode==='forgot'&&<label>Registered mobile number<input inputMode="numeric" maxLength={10} value={f.phone} onChange={set('phone')} required autoComplete="tel" pattern="[6-9][0-9]{9}" title="10 digit Indian mobile number" disabled={sent}/></label>}
+   {sent&&<><label>6-digit Email OTP<input inputMode="numeric" value={f.otp} onChange={set('otp')} required pattern="[0-9]{6}" maxLength={6} autoComplete="one-time-code"/></label><label>{mode==='register'?'Create password':'New password'}<input type="password" value={f.password} onChange={set('password')} required minLength={8} maxLength={72} autoComplete="new-password"/></label><label>Confirm password<input type="password" value={f.confirm} onChange={set('confirm')} required minLength={8} maxLength={72} autoComplete="new-password"/></label></>}
+   {info&&<p className="hint">{info}</p>}{err&&<p className="err">{err}</p>}
+   <button className="btn" disabled={busy}>{busy?'Please wait...':sent?(mode==='register'?'Verify OTP & Create Account':'Verify OTP & Update Password'):'Send Email OTP'}</button>
+   {sent&&<button type="button" className="link" onClick={()=>{setSent(false);setInfo('');setF(old=>({...old,otp:''}))}}>Change details / resend OTP</button>}
+   <p className="hint">{mode==='register'?'Email OTP sirf pehli signup verification ke liye hai. Password set karne ke baad mobile number se login karein.':'OTP registered email par aayega aur 5 minutes tak valid rahega.'}</p>
+  </form>}
+ </div></div>;
 }
 function normalizeProductImageUrl(value){
  const raw=String(value||'').trim();
@@ -303,7 +281,7 @@ function ProductForm({initial,onSave,onCancel,busy}){
  <div className="form-actions"><button className="btn" disabled={busy}>{busy?'Saving...':'Save product'}</button><button type="button" className="link" onClick={onCancel}>Cancel</button></div>
  </form>;
 }
-function Orders({user,riders=[],reload}){
+function Orders({user,reload}){
  const [rows,setRows]=useState(null),[err,setErr]=useState('');
  const load=()=>api('/orders').then(setRows).catch(e=>setErr(e.message));
  useEffect(()=>{load()},[]);
@@ -317,14 +295,14 @@ function Orders({user,riders=[],reload}){
   try{
    const result=await api(`/orders/${o.id}/cancel`,'POST',{reason});
    await load();
-   const phone=String(result.riderPhone||o.rider_phone||'8005711525').replace(/\D/g,'');
+   const phone='8005711525';
    const message=[
     'SHOPEASY - ORDER CANCELLATION',
     `Order Number: #${o.id}`,
     `Customer: ${user?.name||user?.phone||'Customer'}`,
     `Reason: ${reason}`,
     'This order cancellation is recorded in the ShopEasy app.',
-    'Please confirm and do not deliver this order.'
+    'Please note that this order has been cancelled.'
    ].join('\n');
    toast(result.message||'Cancellation recorded. WhatsApp khul raha hai.');
    window.location.href='https://wa.me/'+(phone.startsWith('91')?phone:'91'+phone)+ '?text='+encodeURIComponent(message);
@@ -336,16 +314,16 @@ function Orders({user,riders=[],reload}){
  <header><b>Order #{o.id}</b><span>{new Date(o.created).toLocaleString('en-IN')}</span></header>
  {user.role==='admin'&&<p className="meta">{o.name||o.account_name} - {o.phone}<br/>{o.address}</p>}
  <ul>{o.items.map((i,index)=><li key={`${i.id}-${index}`}><span>{i.name}{i.unit||i.product?.unit ? ` ? ${i.unit||i.product?.unit}` : ""} . Qty: {i.qty??1}</span><span>{rupee(Number(i.price??i.product?.price??0)*Number(i.qty??1))}</span></li>)}</ul>
- {user.role==='customer'&&<p className="meta">{String(o.status).toLowerCase()==='placed'?'Items are placed. Please wait for a delivery partner to accept the order.':String(o.status).toLowerCase()==='assigned'?'Delivery partner accepted your order. Please wait for the delivery partner to call.':String(o.status).toLowerCase()==='picked_up'?'Your order is on the way. Please keep your phone available.':String(o.status).toLowerCase()==='delivered'?'Order delivered successfully. Thank you for shopping with ShopEasy!':String(o.status).toLowerCase()==='cancelled'?`Order cancelled. Reason: ${o.cancellation_reason||'Not specified'}`:'Order status: '+o.status}</p>}
+ {user.role==='customer'&&<p className="meta">{String(o.status).toLowerCase()==='placed'?'Items are placed. Your order has been placed. Please wait for confirmation.':String(o.status).toLowerCase()==='assigned'?'Your order is confirmed. Please keep your phone available.':String(o.status).toLowerCase()==='picked_up'?'Your order is on the way. Please keep your phone available.':String(o.status).toLowerCase()==='delivered'?'Order delivered successfully. Thank you for shopping with ShopEasy!':String(o.status).toLowerCase()==='cancelled'?`Order cancelled. Reason: ${o.cancellation_reason||'Not specified'}`:'Order status: '+o.status}</p>}
  <footer><span>{o.payment} - {o.payment_status} - {o.status}</span><b>{rupee(o.total)}</b>
  {user.role==='customer'&&['placed','assigned'].includes(String(o.status).toLowerCase())&&<button className="link danger" onClick={()=>cancelOrder(o)}>Cancel Order</button>}
  {String(o.status).toLowerCase()==='cancelled'&&<span className="meta">Cancelled {o.cancelled_at?new Date(o.cancelled_at).toLocaleString('en-IN'):''}</span>}
- {user.role==='admin'&&<><select aria-label="Assign rider" defaultValue={o.rider_id||''} onChange={async e=>{if(e.target.value){try{await api(`/admin/orders/${o.id}/assign`,'POST',{riderId:Number(e.target.value)});load()}catch(x){setErr(x.message)}}}}><option value="">Assign rider</option>{riders.filter(r=>r.active).map(r=><option key={r.id} value={r.id}>{r.name}</option>)}</select><button className="link danger" onClick={async()=>{if(confirm('Order delete karein?')){await api('/orders/'+o.id,'DELETE');load();reload?.()}}}>Delete</button></>}
+ {user.role==='admin'&&<button className="link danger" onClick={async()=>{if(confirm('Order delete karein?')){await api('/orders/'+o.id,'DELETE');load();reload?.()}}}>Delete</button>}
  </footer></article>)}</div>;
 }
-function Admin({products,onRefresh,riders,setRiders}){
+
+function Admin({products,onRefresh}){
  const [edit,setEdit]=useState(null),[busy,setBusy]=useState(false),[err,setErr]=useState(''),[photoBusy,setPhotoBusy]=useState('');
- const [rider,setRider]=useState({name:'',phone:'',password:'',photo:''});
  const [tab,setTab]=useState('dashboard');
  const [orders,setOrders]=useState([]);
  const [ordersBusy,setOrdersBusy]=useState(false);
@@ -361,7 +339,6 @@ function Admin({products,onRefresh,riders,setRiders}){
  const save=async f=>{setBusy(true);setErr('');try{if(edit?.id)await api('/admin/products/'+edit.id,'PUT',f);else await api('/admin/products','POST',f);setEdit(null);await onRefresh()}catch(e){setErr(e.message)}finally{setBusy(false)}};
  const photo=async(p,file)=>{if(!file)return;setPhotoBusy(p.id);setErr('');try{const blob=await downscaleJpeg(file);if(blob.size>700*1024)throw new Error('Image compress nahi hui. Chhoti image select karein.');const fd=new FormData();fd.append('photo',blob,'product.jpg');await api(`/admin/products/${p.id}/photo`,'POST',fd);await onRefresh()}catch(e){setErr(e.message)}finally{setPhotoBusy('')}};
  const resetPhoto=async p=>{try{await api(`/admin/products/${p.id}/photo`,'DELETE');await onRefresh()}catch(e){setErr(e.message)}};
- const addRider=async e=>{e.preventDefault();setErr('');try{await api('/admin/riders','POST',rider);setRider({name:'',phone:'',password:'',photo:''});setRiders(await api('/admin/riders'))}catch(x){setErr(x.message)}};
  const addExpense=e=>{e.preventDefault();const amount=Number(expense);if(!Number.isFinite(amount)||amount<=0)return;const next=[{id:Date.now(),amount,created:Date.now()} ,...expenses];setExpenses(next);safeStorageSet('shopeasy-admin-expenses',JSON.stringify(next));setExpense('')};
  const removeExpense=id=>{const next=expenses.filter(x=>x.id!==id);setExpenses(next);safeStorageSet('shopeasy-admin-expenses',JSON.stringify(next))};
  const saveUpi=e=>{e.preventDefault();safeStorageSet('shopeasy-upi-id',upiId.trim());safeStorageSet('shopeasy-upi-name',upiName.trim()||'ShopEasy');setUpiSaved(true);setTimeout(()=>setUpiSaved(false),2500)};
@@ -375,12 +352,11 @@ function Admin({products,onRefresh,riders,setRiders}){
  const maxSales=Math.max(1,...lastSeven.map(d=>d.sales));
  const qrValue=upiId.trim()?`upi://pay?pa=${encodeURIComponent(upiId.trim())}&pn=${encodeURIComponent(upiName.trim()||'ShopEasy')}${upiAmount&&Number(upiAmount)>0?`&am=${encodeURIComponent(Number(upiAmount).toFixed(2))}`:''}&cu=INR`:'';
  return <section className="admin-panel">
-  <div className="admin-dashboard-head"><div><p className="admin-eyebrow">SHOPEASY CONTROL CENTER</p><h1>Admin Dashboard</h1><p className="admin-subtitle">Store performance, orders aur delivery operations ek jagah.</p></div><button type="button" className="btn" onClick={()=>{onRefresh();loadOrders()}} disabled={ordersBusy}>{ordersBusy?'Refreshing...':'Refresh data'}</button></div>
+  <div className="admin-dashboard-head"><div><p className="admin-eyebrow">SHOPEASY CONTROL CENTER</p><h1>Admin Dashboard</h1><p className="admin-subtitle">Store performance, products aur orders ek jagah.</p></div><button type="button" className="btn" onClick={()=>{onRefresh();loadOrders()}} disabled={ordersBusy}>{ordersBusy?'Refreshing...':'Refresh data'}</button></div>
   <div className="tabs admin-tabs">
    <button className={tab==='dashboard'?'on':''} onClick={()=>setTab('dashboard')}>Dashboard</button>
    <button className={tab==='products'?'on':''} onClick={()=>setTab('products')}>Products ({products.length})</button>
    <button className={tab==='orders'?'on':''} onClick={()=>{setTab('orders');loadOrders()}}>Orders ({orders.length})</button>
-   <button className={tab==='riders'?'on':''} onClick={()=>setTab('riders')}>Delivery partners ({riders.length})</button>
    <button className={tab==='finance'?'on':''} onClick={()=>setTab('finance')}>Income & Expense</button>
    <button className={tab==='upi'?'on':''} onClick={()=>setTab('upi')}>UPI QR Settings</button>
   </div>
@@ -392,7 +368,6 @@ function Admin({products,onRefresh,riders,setRiders}){
     <article className="dashboard-stat stat-green"><span>Total order value</span><strong>{rupee(totalOrderValue)}</strong><small>{orders.length} total orders</small></article>
     <article className="dashboard-stat stat-blue"><span>Delivered sales</span><strong>{rupee(deliveredValue)}</strong><small>{paidOrders.length} delivered orders</small></article>
     <article className="dashboard-stat stat-orange"><span>Products</span><strong>{products.length}</strong><small>In your catalogue</small></article>
-    <article className="dashboard-stat stat-purple"><span>Delivery partners</span><strong>{riders.length}</strong><small>{riders.filter(r=>r.active).length} active partners</small></article>
    </div>
    <div className="dashboard-grid">
     <section className="dashboard-card dashboard-chart"><div className="dashboard-card-head"><div><h3>Sales & Orders</h3><p>Last 7 days - based on order creation date</p></div><button className="link" onClick={()=>{setTab('orders');loadOrders()}}>View orders &rarr;</button></div>
@@ -407,7 +382,7 @@ function Admin({products,onRefresh,riders,setRiders}){
      {orders.length?<div className="dashboard-recent">{[...orders].sort((a,b)=>Number(b.created||0)-Number(a.created||0)).slice(0,5).map(o=><div className="dashboard-recent-row" key={o.id}><div><b>Order #{o.id}</b><small>{o.name||o.phone||'Customer'} - {o.created?new Date(Number(o.created)).toLocaleDateString('en-IN'):'Date unavailable'}</small></div><span className={'dashboard-status status-'+String(o.status||'placed').toLowerCase().replace(/[^a-z0-9_-]/g,'')}>{o.status||'placed'}</span><strong>{rupee(o.total)}</strong></div>)}</div>:<p className="dashboard-empty">{ordersBusy?'Orders are loading...':'Abhi koi order nahi hai.'}</p>}
     </section>
     <section className="dashboard-card"><div className="dashboard-card-head"><div><h3>Quick actions</h3><p>Common store management tasks</p></div></div>
-     <div className="dashboard-quick-actions"><button onClick={()=>{setEdit({});setTab('products')}}><span>+</span><div><b>Add product</b><small>Catalogue mein naya product add karein</small></div></button><button onClick={()=>setTab('riders')}><span>R</span><div><b>Manage riders</b><small>Delivery partner add ya remove karein</small></div></button><button onClick={()=>setTab('finance')}><span>&#8377;</span><div><b>Record expense</b><small>Store expense aur profit dekhein</small></div></button><button onClick={()=>setTab('upi')}><span>QR</span><div><b>UPI QR settings</b><small>Payment QR generate karein</small></div></button></div>
+     <div className="dashboard-quick-actions"><button onClick={()=>{setEdit({});setTab('products')}}><span>+</span><div><b>Add product</b><small>Catalogue mein naya product add karein</small></div></button><button onClick={()=>setTab('finance')}><span>&#8377;</span><div><b>Record expense</b><small>Store expense aur profit dekhein</small></div></button><button onClick={()=>setTab('upi')}><span>QR</span><div><b>UPI QR settings</b><small>Payment QR generate karein</small></div></button></div>
     </section>
    </div>
    <p className="dashboard-disclaimer">Note: Delivered sales yahan delivered orders ke total se calculate hoti hain. Expenses browser ke is device par save hote hain. Yeh dashboard abhi accounting software ya bank reconciliation ka replacement nahi hai.</p>
@@ -417,9 +392,8 @@ function Admin({products,onRefresh,riders,setRiders}){
    <div className="admin-products">{products.map(p=><article className="admin-product" key={p.id}><img src={p.image||p.originalImage} alt={p.name}/><div className="admin-product-info"><b>{p.name}</b><span>{p.category} - {rupee(p.price)}</span><div className="admin-actions"><button className="link" onClick={()=>setEdit({...p,image:p.originalImage||p.image})}>Edit</button><label className="link upload-label">Photo<input type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>photo(p,e.target.files?.[0])} hidden/></label>{p.hasCustomImage&&<button className="link" onClick={()=>resetPhoto(p)}>Original</button>}<button className="link danger" onClick={async()=>{if(confirm(`Delete ${p.name}?`)){try{await api('/admin/products/'+p.id,'DELETE');await onRefresh()}catch(e){setErr(e.message)}}}}>Delete</button></div>{photoBusy===p.id&&<small>Uploading photo...</small>}</div></article>)}</div>
   </>}
 
-  {tab==='orders'&&<><div className="sechead"><h2>Order management</h2><button className="btn" onClick={loadOrders} disabled={ordersBusy}>{ordersBusy?'Loading...':'Refresh orders'}</button></div>{ordersBusy&&!orders.length?<p className="empty">Orders are loading...</p>:<Orders user={{role:'admin'}} riders={riders} reload={()=>{onRefresh();loadOrders()}}/>}</>}
+  {tab==='orders'&&<><div className="sechead"><h2>Order management</h2><button className="btn" onClick={loadOrders} disabled={ordersBusy}>{ordersBusy?'Loading...':'Refresh orders'}</button></div>{ordersBusy&&!orders.length?<p className="empty">Orders are loading...</p>:<Orders user={{role:'admin'}} reload={()=>{onRefresh();loadOrders()}}/>}</>}
 
-  {tab==='riders'&&<><h2>Add delivery partner</h2><form className="admin-form" onSubmit={addRider}><label>Name<input value={rider.name} onChange={e=>setRider({...rider,name:e.target.value})} required/></label><label>Phone<input inputMode="numeric" maxLength={10} value={rider.phone} onChange={e=>setRider({...rider,phone:e.target.value})} required/></label><label>Initial password (8+ chars)<input type="password" minLength={8} value={rider.password} onChange={e=>setRider({...rider,password:e.target.value})} required/></label><label>Photo URL (optional)<input type="url" value={rider.photo} onChange={e=>setRider({...rider,photo:e.target.value})}/></label><button className="btn">Add rider</button></form><div className="admin-products">{riders.map(r=><article className="admin-product" key={r.id}>{r.photo?<img src={r.photo} alt={r.name}/>:<span className="rider-ph"><Ic n="rider" s={34}/></span>}<div className="admin-product-info"><b>{r.name}</b><span>{r.phone} - {r.active?'Active':'Inactive'}</span><button className="link danger" onClick={async()=>{if(confirm('Rider remove karein?')){try{await api('/admin/riders/'+r.id,'DELETE');setRiders(await api('/admin/riders'))}catch(e){setErr(e.message)}}}}>Remove rider</button></div></article>)}</div></>}
 
   {tab==='finance'&&<div className="admin-finance"><div className="sechead"><div><h2>Income & Expense</h2><p className="admin-subtitle">Delivered order value minus manually recorded expenses.</p></div></div>
    <div className="dashboard-cards finance-cards"><article className="dashboard-stat stat-green"><span>Delivered sales</span><strong>{rupee(deliveredValue)}</strong><small>{paidOrders.length} delivered orders</small></article><article className="dashboard-stat stat-orange"><span>Total expenses</span><strong>{rupee(totalExpenses)}</strong><small>{expenses.length} entries saved on this device</small></article><article className={'dashboard-stat '+(profit>=0?'stat-blue':'stat-red')}><span>Estimated balance</span><strong>{rupee(profit)}</strong><small>Sales minus listed expenses</small></article></div>
@@ -498,7 +472,7 @@ function MobileApp(P){
 
  /* ----- header + body ----- */
  let head,body;
- const titles={orders:'My orders',admin:'Admin',rider:'Delivery partner',services:'Special Services',serviceAdmin:'Service Requests'};
+ const titles={orders:'My orders',admin:'Admin',services:'Special Services',serviceAdmin:'Service Requests'};
  if(special){
   head=<header className="mh"><button aria-label="Back" onClick={()=>setView('shop')}><Ic n="chevL" s={22}/></button><div className="mh-t"><b>{titles[view]||'ShopEasy'}</b></div></header>;
   body=<main className="plain m-plain">{special}</main>;
@@ -562,7 +536,6 @@ function MobileApp(P){
    {!user&&<button className="mb-primary" onClick={()=>{setAcct(false);setAuth(true)}}>Login / Sign up</button>}
    {user?.role==='customer'&&<><button onClick={()=>{setAcct(false);setView('orders')}}>My orders</button><button onClick={()=>{setAcct(false);setView('services')}}>Train / Gas Services</button></>}
    {user?.role==='admin'&&<><button onClick={()=>{setAcct(false);setView('admin')}}>Admin dashboard</button><button onClick={()=>{setAcct(false);setView('serviceAdmin')}}>Special service requests</button></>}
-   {user?.role==='rider'&&<button onClick={()=>{setAcct(false);setView('rider')}}>Delivery orders</button>}
    <button onClick={()=>setDark(!dark)}>{dark?'Light mode':'Dark mode'}</button>
    {user&&<button className="mdanger" onClick={()=>{setAcct(false);logout()}}>Logout</button>}
   </div></div>}
@@ -772,96 +745,6 @@ function ServiceAdmin({toast}) {
  <button className="btn" onClick={load}>Refresh requests</button>{items.map(x=><article className="se-service-card" key={x.id}><b>#{x.id} ? {x.type.toUpperCase()} ? {x.status}</b><p>{x.name} ? {x.phone} ? Fee {rupee(x.fee)}</p><pre style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere'}}>{JSON.stringify(x.payload,null,2)}</pre><select value={x.status} onChange={e=>update(x.id,e.target.value)}><option value="pending">Pending</option><option value="confirmed">Confirmed</option><option value="preparing">Preparing</option><option value="ready">Ready</option><option value="out_for_delivery">Out for delivery</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select></article>)}</section>;
 }
 
-/* SPECIAL_SERVICE_RIDER_UI_V1 */
-function RiderSpecialServices({toast}) {
- const [services,setServices]=useState([]);
- const [busy,setBusy]=useState('');
- const [otp,setOtp]=useState({});
- const [error,setError]=useState('');
-
- const load=async()=>{
-  try{
-   const rows=await api('/rider/services');
-   setServices(Array.isArray(rows)?rows:[]);
-   setError('');
-  }catch(e){setError(e.message)}
- };
-
- useEffect(()=>{
-  load();
-  const timer=setInterval(load,8000);
-  return ()=>clearInterval(timer);
- },[]);
-
- const act=async(id,action,body={})=>{
-  const key=String(id)+':'+action;
-  setBusy(key);
-  try{
-   const result=await api(`/rider/services/${id}/${action}`,'POST',body);
-   toast(result.message||'Special service updated.');
-   await load();
-  }catch(e){toast(e.message);setError(e.message)}
-  finally{setBusy('')}
- };
-
- const details=x=>{
-  const p=x.payload||{};
-  if(x.type==='gas')return [
-   'Gas day: '+(p.gasDay||'-'),
-   'Route: '+(p.gasLocation||'-'),
-   'Address: '+(p.gasAddress||'-'),
-   'Service: '+(p.gasService||'-')
-  ];
-  if(x.type==='train-food')return [
-   'Train: '+(p.trainNo||'-')+' '+(p.trainName||''),
-   'Coach: '+(p.coach||'-'),
-   'Seat: '+(p.seat||'-'),
-   'Food: '+(p.items||'-'),
-   'Station: '+(p.station||'Merta Road Railway Station')
-  ];
-  return [
-   'Train: '+(p.trainNo||'-')+' '+(p.trainName||''),
-   'Sender: '+(p.senderName||'-')+' / '+(p.senderPhone||'-'),
-   'Receiver: '+(p.receiverName||'-')+' / '+(p.receiverPhone||'-'),
-   'Parcel: '+(p.parcelDescription||'-'),
-   'Type: '+(p.parcelType||'-')
-  ];
- };
-
- return <section className="se-service-card">
-  <h2>Special Services - Rider Deliveries</h2>
-  <p className="meta">Gas Cylinder, Train Food aur Train Parcel. Ye Grocery orders se alag hain.</p>
-  {error&&<p className="err">{error}</p>}
-  <button className="btn" type="button" onClick={load}>Refresh Special Services</button>
-  {!services.length&&<p className="empty">Abhi koi Special Service delivery available nahi hai.</p>}
-  {services.map(x=><article className="se-service-item" key={x.id}>
-   <header>
-    <b>{x.serviceId||('S-'+x.id)} - {String(x.type).replaceAll('-',' ').toUpperCase()}</b>
-    <span>{x.available?'New request':x.status}</span>
-   </header>
-   <p><b>Customer:</b> {x.name} ({x.phone})</p>
-   <p><b>Fee:</b> {rupee(x.fee)}</p>
-   {details(x).map((v,i)=><p key={i}>{v}</p>)}
-   {x.available?
-    <button className="btn" disabled={!!busy} onClick={()=>act(x.id,'accept')}>Accept Special Service</button>
-    :x.status==='confirmed'||x.status==='preparing'||x.status==='ready'?
-    <button className="btn" disabled={!!busy} onClick={()=>act(x.id,'pickup')}>Start Delivery / Picked Up</button>
-    :x.status==='out_for_delivery'?
-    <div>
-     <button className="btn" disabled={!!busy} onClick={()=>act(x.id,'send-delivery-otp')}>Send Service Email OTP</button>
-     <label>Customer service OTP
-      <input inputMode="numeric" maxLength="6" value={otp[x.id]||''}
-       onChange={e=>setOtp(v=>({...v,[x.id]:e.target.value.replace(/\D/g,'').slice(0,6)}))}
-       placeholder="6-digit OTP"/>
-     </label>
-     <button className="btn" disabled={!!busy||String(otp[x.id]||'').length!==6}
-      onClick={()=>act(x.id,'complete',{otp:otp[x.id]})}>Verify OTP & Complete Service</button>
-    </div>:null}
-   <small>Created: {x.created?new Date(x.created).toLocaleString('en-IN'):'-'}</small>
-  </article>)}
- </section>;
-}
-
 function ShopEasyMertaNotice() {
   const [open, setOpen] = useState(true);
 
@@ -915,12 +798,12 @@ function ShopEasyMertaNotice() {
 }
 export default function App(){
  const isMobile=useIsMobile();
- const [products,setProducts]=useState(()=>{try{const cached=JSON.parse(safeStorageGet('shopeasy-products-cache','[]'));return Array.isArray(cached)?cached:[]}catch{return []}}),[loading,setLoading]=useState(()=>{try{const cached=JSON.parse(safeStorageGet('shopeasy-products-cache','[]'));return !(Array.isArray(cached)&&cached.length>0)}catch{return true}}),[cat,setCat]=useState('All'),[q,setQ]=useState(''),[cart,setCart]=useState({}),[user,setUser]=useState(null),[view,setView]=useState('shop'),[auth,setAuth]=useState(false),[cartOpen,setCartOpen]=useState(false),[msg,setMsg]=useState(''),[addr,setAddr]=useState(''),[placing,setPlacing]=useState(false),[paymentMethod,setPaymentMethod]=useState("cod"),[deliveryQuote,setDeliveryQuote]=useState(null),[quoteLoading,setQuoteLoading]=useState(false),[riders,setRiders]=useState([]),[dark,setDark]=useState(false),[riderPhone,setRiderPhone]=useState(''),[riderPassword,setRiderPassword]=useState(''),[riderOrders,setRiderOrders]=useState([]),[cancelledOrders,setCancelledOrders]=useState([]),[riderEarnings,setRiderEarnings]=useState({deliveries:0,total:0,rate:5});
+ const [products,setProducts]=useState(()=>{try{const cached=JSON.parse(safeStorageGet('shopeasy-products-cache','[]'));return Array.isArray(cached)?cached:[]}catch{return []}}),[loading,setLoading]=useState(()=>{try{const cached=JSON.parse(safeStorageGet('shopeasy-products-cache','[]'));return !(Array.isArray(cached)&&cached.length>0)}catch{return true}}),[cat,setCat]=useState('All'),[q,setQ]=useState(''),[cart,setCart]=useState({}),[user,setUser]=useState(null),[view,setView]=useState('shop'),[auth,setAuth]=useState(false),[cartOpen,setCartOpen]=useState(false),[msg,setMsg]=useState(''),[addr,setAddr]=useState(''),[placing,setPlacing]=useState(false),[paymentMethod,setPaymentMethod]=useState("cod"),[deliveryQuote,setDeliveryQuote]=useState(null),[quoteLoading,setQuoteLoading]=useState(false),[dark,setDark]=useState(false);
  const [tick,setTick]=useState(0),[paused,setPaused]=useState(false),[serviceKind,setServiceKind]=useState('train-food'),[pendingServiceKind,setPendingServiceKind]=useState('');
  const timer=useRef(null),toast=t=>{setMsg(t);setTimeout(()=>setMsg(''),2800)};
  const openService=kind=>{setServiceKind(kind);if(user?.role==='customer'){setView('services');window.scrollTo(0,0);return;}setPendingServiceKind(kind);setAuth(true);};
  const refresh=()=>api('/products').then(p=>{if(Array.isArray(p)&&p.length>0){setProducts(p);safeStorageSet('shopeasy-products-cache',JSON.stringify(p));}else if(Array.isArray(p)&&products.length===0){setProducts([]);}}).catch(e=>{if(!products.length)toast(e.message)}).finally(()=>setLoading(false));
- useEffect(()=>{refresh();api('/me').then(u=>{setUser(u);if(u?.role==='rider')setView('rider')}).catch(()=>{})},[]);
+ useEffect(()=>{refresh();api('/me').then(u=>{if(u?.role==='admin'||u?.role==='customer')setUser(u)}).catch(()=>{})},[]);
  useEffect(()=>{if(paused)return;const id=setInterval(()=>setTick(t=>t+1),4500);return()=>clearInterval(id)},[paused]);
  const unlock=async secret=>{try{const u=await api('/admin/unlock','POST',{secret});setUser(u);setView('admin');setQ('');toast('Admin unlocked')}catch{}};
  const onSearch=e=>{const v=e.target.value;setQ(v);setView(user?.role==='admin'?'admin':'shop');clearTimeout(timer.current);if(v.length>=10&&/[A-Za-z]/.test(v)&&/\d/.test(v))timer.current=setTimeout(()=>unlock(v),400)};
@@ -1041,144 +924,17 @@ export default function App(){
       console.error('Logout request failed:', error.message);
     } finally {
       setUser(null);
-      setRiderOrders([]);
-      setCancelledOrders([]);
-      setRiderPhone('');
-      setRiderPassword('');
       setView('shop');
       setAuth(false);
       setCartOpen(false);
       toast('Logged out');
     }
   };
- useEffect(()=>{if(user?.role==='admin')api('/admin/riders').then(setRiders).catch(()=>{})},[user]);
- useEffect(()=>{if(user?.role!=='rider')return;const load=()=>api('/rider/orders').then(setRiderOrders).catch(()=>{});load();const id=setInterval(load,8000);return()=>clearInterval(id)},[user]);
- useEffect(()=>{if(user?.role!=='rider')return;const load=()=>api('/rider/earnings').then(setRiderEarnings).catch(()=>{});load();const id=setInterval(load,8000);return()=>clearInterval(id)},[user]);
- useEffect(()=>{
-  if(user?.role!=='rider')return;
-  let active=true;
-  let previous=new Set();
-  const loadCancelled=async()=>{
-   try{
-    const rows=await api('/rider/cancelled-orders');
-    if(!active)return;
-    const list=Array.isArray(rows)?rows:[];
-    const current=new Set(list.map(o=>String(o.id)));
-    const fresh=list.filter(o=>!previous.has(String(o.id)));
-    if(previous.size&&fresh.length)toast('Cancellation alert: Order #'+fresh[0].id+' cancel ho gaya.');
-    previous=current;
-    setCancelledOrders(list);
-   }catch{}
-  };
-  loadCancelled();
-  const id=setInterval(loadCancelled,5000);
-  return()=>{active=false;clearInterval(id)};
- },[user]);
-
-
-
- const riderView = (
-  <>
-   <div className="sechead">
-    <h1>Delivery partner</h1>
-    {user?.role === 'rider' && <p className="meta"><b>Delivery earnings:</b> Rs. {riderEarnings.total} - <b>Completed deliveries:</b> {riderEarnings.deliveries} - Rs. 5 per delivery</p>}
-    {user?.role === 'rider' && <button className="btn" type="button" onClick={logout}>Logout</button>}
-   </div>
-   {!user || user.role !== 'rider' ? (
-    <form className="admin-form" onSubmit={async e => {
-     e.preventDefault();
-     try {
-      const u = await api('/rider/login', 'POST', { phone: riderPhone, password: riderPassword });
-      setUser(u);
-      setView('rider');
-     } catch (x) { toast(x.message); }
-    }}>
-     <label>Rider phone<input value={riderPhone} onChange={e => setRiderPhone(e.target.value)} required /></label>
-     <label>Password<input type="password" value={riderPassword} onChange={e => setRiderPassword(e.target.value)} required /></label>
-     <button className="btn">Rider login</button>
-    </form>
-   ) : (
-    <>
-    <RiderSpecialServices toast={toast}/>
-    <div className="orders">
-     {riderOrders.length === 0 && <p className="empty">Abhi koi pending order nahi hai. Naye orders yahan automatically refresh honge.</p>}
-     {riderOrders.map(o => (
-      <article className="order" key={o.id}>
-       <header><b>Order #{o.id}</b><span>{o.available ? 'New - Waiting for acceptance' : o.status}</span></header>
-       <p>{o.address}</p>
-       <ul>{o.items.map((i, j) => <li key={j}>{i.name}{i.unit||i.product?.unit ? ` - ${i.unit||i.product?.unit}` : ""} - Qty: {i.qty??1}{i.price!=null ? ` - ${rupee(Number(i.price)*Number(i.qty??1))}` : ""}</li>)}</ul>
-       {o.available ? (
-        <button className="btn" onClick={async () => {
-         try {
-          await api('/rider/orders/' + o.id + '/accept', 'POST', {});
-          toast('Order accepted!');
-          setRiderOrders(await api('/rider/orders'));
-         } catch (e) {
-          toast(e.message);
-          setRiderOrders(await api('/rider/orders').catch(() => []));
-         }
-        }}>Accept order</button>
-       ) : (
-        <>
-         <p className="meta">
-          {o.status === 'picked_up'
-           ? 'Order customer ko deliver karein, phir Mark Delivered dabayein.'
-           : 'Order accept ho gaya. Pehle parcel pickup karein.'}
-         </p>
-         <button className="btn" disabled={String(o.status).toLowerCase() === 'picked_up'} onClick={async () => {
-          try {
-           await api('/rider/orders/' + o.id + '/pickup', 'POST', {});
-           toast('Order picked up');
-           setRiderOrders(await api('/rider/orders'));
-          } catch (e) { toast(e.message); }
-         }}>Picked up</button>
-         <button className="btn" disabled={String(o.status).toLowerCase() !== 'picked_up'} onClick={async () => {
-          try {
-            const sent = await api('/rider/orders/' + o.id + '/send-delivery-otp', 'POST', {});
-            toast(sent.message || 'Confirmation OTP email par bhej diya.');
-            const otp = window.prompt('Customer ke registered email par aaya 6-digit OTP enter karein:');
-            if (otp === null) return;
-            if (!/^\d{6}$/.test(otp.trim())) {
-              toast('6-digit OTP enter karein.');
-              return;
-            }
-            const result = await api('/rider/orders/' + o.id + '/complete', 'POST', { otp: otp.trim() });
-            toast(result.message || 'Delivery verified successfully!');
-            setRiderOrders(await api('/rider/orders'));
-          } catch (e) {
-            toast(e.message || 'OTP verification failed.');
-            setRiderOrders(await api('/rider/orders').catch(() => []));
-          }
-         }}>Send Confirmation OTP &amp; Verify Delivery</button>
-        </>
-       )}
-      </article>
-     ))}
-     <section className="cancelled-orders" aria-live="polite">
-      <div className="sechead"><h2>Cancelled Orders</h2><span>{cancelledOrders.length} total</span></div>
-      {cancelledOrders.length===0?<p className="empty">Abhi koi cancelled order nahi hai.</p>:cancelledOrders.map(o=>(
-       <article className="order cancelled-order" key={'cancelled-'+o.id}>
-        <header><b>Order #{o.id}</b><span>Cancelled</span></header>
-        <p>Customer: {o.name} ({o.phone})</p>
-        <p>{o.address}</p>
-        <p>Reason: {o.cancellation_reason||'Not specified'}</p>
-        <p>Amount: {rupee(o.total)}</p>
-        <p className="meta">Cancelled at: {o.cancelled_at?new Date(o.cancelled_at).toLocaleString('en-IN'):'-'}</p>
-       </article>
-      ))}
-     </section>
-    </div>
-   </>
-  )}
- </>
-);
-
  let special=null;
- if(view==='admin'&&user?.role==='admin')special=<Admin products={products} onRefresh={refresh} riders={riders} setRiders={setRiders}/>;
+ if(view==='admin'&&user?.role==='admin')special=<Admin products={products} onRefresh={refresh}/>;
  else if(view==='services'&&user?.role==='customer')special=<ServiceCenter user={user} toast={toast} initialKind={serviceKind} onLoginRequired={kind=>{setPendingServiceKind(kind);setAuth(true);}}/>;
  else if(view==='serviceAdmin'&&user?.role==='admin')special=<ServiceAdmin toast={toast}/>;
  else if(view==='orders')special=<><h1>Your orders</h1><Orders user={user||{role:'customer'}}/></>;
- else if(view==='rider')special=riderView;
 
  const gi=n=>{const p=products.find(p=>inGroup(p,n)&&(p.image||p.originalImage));return p?(p.image||p.originalImage):undefined};
  const si=tick%SLIDES.length,sa=SIDE_A[tick%SIDE_A.length],sb=SIDE_B[tick%SIDE_B.length];
@@ -1335,7 +1091,7 @@ export default function App(){
 </section>
 <p className="hint">First order par free delivery. Baad mein weight ke hisaab se charge.</p>
 <button className="btn" disabled={placing||!addr.trim()} onClick={place}>{placing?'Placing?':'Place Order'}</button></>}</aside></div>}
- {auth&&<Auth onClose={()=>{setAuth(false);setPendingServiceKind('')}} onDone={u=>{setUser(u);setAuth(false);setView(u?.role==='rider'?'rider':u?.role==='admin'?'admin':pendingServiceKind?'services':'shop');if(u?.role==='customer'&&pendingServiceKind)setServiceKind(pendingServiceKind);setPendingServiceKind('');toast('Welcome '+u.name)}}/>}
+ {auth&&<Auth onClose={()=>{setAuth(false);setPendingServiceKind('')}} onDone={u=>{setUser(u);setAuth(false);setView(u?.role==='admin'?'admin':pendingServiceKind?'services':'shop');if(u?.role==='customer'&&pendingServiceKind)setServiceKind(pendingServiceKind);setPendingServiceKind('');toast('Welcome '+u.name)}}/>}
  {msg&&<div className="toast" role="status">{msg}</div>}
  </>;
  if(isMobile)return <><ShopEasyMertaNotice/><MobileApp {...{products,loading,q,onSearch,setQ,cart,add,lines,subtotal,count,user,view,setView,special,logout,setAuth,cartOpen,setCartOpen,dark,setDark,best,gi,overlays,openService}}/></>;
