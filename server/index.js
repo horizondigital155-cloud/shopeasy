@@ -1,4 +1,4 @@
-﻿import { google } from 'googleapis';
+import { google } from 'googleapis';
 import 'dotenv/config';
 
 import express from 'express';
@@ -286,26 +286,75 @@ const productPhotoUpload = multer({
 
 app.get('/api/products', async (_req, res) => {
   try {
-    const [{ data: products, error }, { data: images, error: imageError }] = await Promise.all([
-      supabase.from('products').select('id,category,name,unit,price,image,created,updated,mrp')
-        .order('category', { ascending: true }).order('name', { ascending: true }),
-      supabase.from('product_images').select('product_id,filename')
-    ]);
-    if (error) throw error;
-    if (imageError) throw imageError;
-    const custom = new Map((images || []).map(row => {
-      const { data } = supabase.storage.from(PRODUCT_IMAGE_BUCKET).getPublicUrl(row.filename);
-      return [String(row.product_id), data.publicUrl];
-    }));
-    return res.json((products || []).map(p => ({
+    const pageSize = 1000;
+    let allProducts = [];
+    let from = 0;
+
+    // Fetch all product pages
+    while (true) {
+      const { data, error } = await supabase
+        .from('products')
+        .select('id,category,name,unit,price,image,created,updated,mrp')
+        .order('category', { ascending: true })
+        .order('name', { ascending: true })
+        .order('id', { ascending: true })
+        .range(from, from + pageSize - 1);
+
+      if (error) throw error;
+
+      const batch = data || [];
+      allProducts.push(...batch);
+
+      if (batch.length < pageSize) break;
+      from += pageSize;
+    }
+
+    // Fetch all custom image records
+    let allImages = [];
+    from = 0;
+
+    while (true) {
+      const { data, error } = await supabase
+        .from('product_images')
+        .select('product_id,filename')
+        .order('product_id', { ascending: true })
+        .range(from, from + pageSize - 1);
+
+      if (error) throw error;
+
+      const batch = data || [];
+      allImages.push(...batch);
+
+      if (batch.length < pageSize) break;
+      from += pageSize;
+    }
+
+    const custom = new Map(
+      allImages.map(row => {
+        const { data } = supabase.storage
+          .from(PRODUCT_IMAGE_BUCKET)
+          .getPublicUrl(row.filename);
+
+        return [String(row.product_id), data.publicUrl];
+      })
+    );
+
+    const result = allProducts.map(p => ({
       ...p,
       originalImage: p.image || '',
       image: p.image || custom.get(String(p.id)) || '',
       hasCustomImage: !p.image && custom.has(String(p.id))
-    })));
+    }));
+
+    console.log('[Products API] Loaded ' + result.length + ' products');
+
+    return res.json(result);
   } catch (error) {
     console.error('Products API failed:', error?.message || error);
-    return res.status(503).json({ error: 'Products load nahi ho paaye. Database connection check karein.' });
+
+    return res.status(503).json({
+      error: 'Products load nahi ho paaye. Database connection check karein.'
+    });
   }
 });
 
@@ -659,4 +708,3 @@ if (process.env.VERCEL !== '1') {
   });
 }
 export default app;
-
