@@ -1,0 +1,32 @@
+﻿services:
+  - type: web
+    name: shopeasy-backend
+    runtime: node
+    rootDir: server
+    buildCommand: npm ci
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: CLIENT_ORIGIN
+        sync: false
+
+  - type: web
+    name: shopeasy-frontend
+    runtime: static
+    rootDir: client
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: VITE_API_BASE_URL
+        sync: false
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

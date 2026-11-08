@@ -22,7 +22,7 @@ export const getApiBaseUrl = () => {
       return safeStorageGet('shopeasy_api_server') || 'http://localhost:4000';
     }
   }
-  return safeStorageGet('shopeasy_api_server') || 'https://shopeasy-backend-31no.onrender.com';
+  return safeStorageGet('shopeasy_api_server') || (import.meta.env.VITE_API_BASE_URL || 'https://shopeasy-backend-31no.onrender.com').replace(/\/+$/, '');
 };
 
 export const resolveImageUrl = (url) => {
@@ -146,8 +146,11 @@ const NAV=[
  ['Groceries & Staples','atta-rice-dals',['Groceries & Staples'],'#f7ecd6'],
   ['Personal Care & Home','personal-care',['Personal Care & Home'],'#dff3e4'],
   ['Fashion & Accessories','fashion',[],'#dde6f3'],
+ ['Home & Kitchen','home-kitchen',['Home & Kitchen'],'#ececec'],
+ ['Travel','travel',['Travel'],'#e8e8ee'],
+ ['Automotive','automotive',['Automotive'],'#dde6f3'],
 ];
-const SHORT={'Fast Food':'Fast Food','Fruits & Vegetables':'Fruits & Vegetables','Dairy & Bakery':'Dairy & Bakery','Atta, Rice & Dals':'Atta, Rice & Dals','Masala & Spices':'Masala & Spices','Cooking Essentials':'Cooking Essentials','Snacks & Beverages':'Snacks & Beverages','Personal Care':'Personal Care','Home Care & Cleaning':'Home Care','Baby Care':'Baby Care','Health & Wellness':'Health & Wellness','Stationery & Office':'Stationery','Electronics & Accessories':'Electronics','Kitchen & Dining':'Kitchen & Dining','Beauty & Cosmetics':'Beauty & Cosmetics','Festive & Gifts':'Gifts','Fashion & Accessories':'Fashion',};
+const SHORT={'Fast Food':'Fast Food','Fruits & Vegetables':'Fruits & Vegetables','Dairy & Bakery':'Dairy & Bakery','Atta, Rice & Dals':'Atta, Rice & Dals','Masala & Spices':'Masala & Spices','Cooking Essentials':'Cooking Essentials','Snacks & Beverages':'Snacks & Beverages','Personal Care':'Personal Care','Home Care & Cleaning':'Home Care','Baby Care':'Baby Care','Health & Wellness':'Health & Wellness','Stationery & Office':'Stationery','Electronics & Accessories':'Electronics','Kitchen & Dining':'Kitchen & Dining','Beauty & Cosmetics':'Beauty & Cosmetics','Festive & Gifts':'Gifts','Fashion & Accessories':'Fashion','Groceries & Staples':'Groceries','Personal Care & Home':'Personal Care & Home','Home & Kitchen':'Home & Kitchen','Travel':'Travel','Automotive':'Automotive',};
 /* [name, subtitle, gradient, image slug -> /img/hl-<slug>.jpg, button colour] */
 const HIGHLIGHTS=[
  ['Fast Food','Quick bites','linear-gradient(135deg,#ffe0d4,#fff1e9)','fast-food','#d9541e'],
@@ -181,7 +184,32 @@ const SIDE_B=[
  {t:'Diwali Pooja Needs',sub:'Ghee, Oils & Masala',off:'Up to 30% OFF',g:'Cooking Essentials',f:'hero-pooja',k:'cooking-essentials'}
 ];
 
-const inGroup=(p,g)=>{const n=NAV.find(x=>x[0]===g);if(!n)return false;const norm=s=>lc(s).replace(/&/g,'and').replace(/[^a-z0-9]/g,'');const c=norm(p.category);if(norm(g)===c||n[2].some(x=>norm(x)===c))return true;if(g==='Fast Food'){return ['pizza','burger','burgers','sandwich','sandwiches','momos','noodles','pasta','fries','rolls','wraps','rollsandwraps','friedchicken','garlicbread','fastfoodcombos'].includes(c)}return false};
+const inGroup=(p,g)=>{
+ const n=NAV.find(x=>x[0]===g);
+ if(!n)return false;
+ const norm=s=>lc(String(s||'')).replace(/&/g,'and').replace(/[^a-z0-9]/g,'');
+ const c=norm(p.category);
+ const aliases={
+  'Fast Food':['Fast Food','Fast Food Combos','Fast Food & Ready-to-Eat','Pizza','Burgers','Sandwiches','Momos','Noodles','Pasta','Fries','Rolls & Wraps','Fried Chicken','Garlic Bread'],
+  'Fruits & Vegetables':['Fruits','Vegetables','Fruits & Vegetables'],
+  'Dairy & Bakery':['Dairy & Eggs','Bakery','Frozen Foods','Dairy & Bakery'],
+  'Atta, Rice & Dals':['Staples','Atta, Rice & Dal','Atta, Rice & Dals'],
+  'Masala & Spices':['Spices','Masala & Spices','Masalas & Spices'],
+  'Cooking Essentials':['Oils','Masala & Oil','Cooking Essentials'],
+  'Snacks & Beverages':['Snacks','Beverages','Snacks & Beverages'],
+  'Personal Care':['Personal Care','Hair Care','Skincare'],
+  'Home Care & Cleaning':['Household','Home Care & Cleaning'],
+  'Health & Wellness':['Dry Fruits','Health & Wellness'],
+  'Beauty & Cosmetics':['Cosmetics & Beauty','Beauty & Cosmetics'],
+  'Groceries & Staples':['Groceries & Staples'],
+  'Personal Care & Home':['Personal Care & Home'],
+  'Home & Kitchen':['Home & Kitchen'],
+  'Travel':['Travel'],
+  'Automotive':['Automotive']
+ };
+ const groupNames=[g,...(n[2]||[]),...(aliases[g]||[])];
+ return groupNames.some(x=>norm(x)===c);
+};
 const offPct=p=>p.mrp&&Number(p.mrp)>Number(p.price)?Math.round((1-p.price/p.mrp)*100):0;
 
 function Logo(){return <svg className="logo" viewBox="0 0 40 40" aria-hidden="true"><rect width="40" height="40" rx="10" fill="#16834a"/><path d="M7 10h4l3 14h14l3-10H13" fill="none" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"/><path d="M15 15h14M16 19h12" stroke="#ffc857" strokeWidth="2" strokeLinecap="round"/><circle cx="17" cy="30" r="2.2" fill="#fff"/><circle cx="27" cy="30" r="2.2" fill="#fff"/></svg>}
@@ -315,7 +343,7 @@ function Orders({user,reload}){
  return <div className="orders">{err&&<p className="error">{err}</p>}{rows.map(o=><article className="order" key={o.id}>
  <header><b>Order #{o.id}</b><span>{new Date(o.created).toLocaleString('en-IN')}</span></header>
  {user.role==='admin'&&<p className="meta">{o.name||o.account_name} - {o.phone}<br/>{o.address}</p>}
- <ul>{o.items.map((i,index)=><li key={`${i.id}-${index}`}><span>{i.name}{i.unit||i.product?.unit ? ` Â· ${i.unit||i.product?.unit}` : ""} . Qty: {i.qty??1}</span><span>{rupee(Number(i.price??i.product?.price??0)*Number(i.qty??1))}</span></li>)}</ul>
+ <ul>{o.items.map((i,index)=><li key={`${i.id}-${index}`}><span>{i.name}{i.unit||i.product?.unit ? ` Ã‚Â· ${i.unit||i.product?.unit}` : ""} . Qty: {i.qty??1}</span><span>{rupee(Number(i.price??i.product?.price??0)*Number(i.qty??1))}</span></li>)}</ul>
  {user.role==='customer'&&<p className="meta">{String(o.status).toLowerCase()==='placed'?'Items are placed. Your order has been placed. Please wait for confirmation.':String(o.status).toLowerCase()==='assigned'?'Your order is confirmed. Please keep your phone available.':String(o.status).toLowerCase()==='picked_up'?'Your order is on the way. Please keep your phone available.':String(o.status).toLowerCase()==='delivered'?'Order delivered successfully. Thank you for shopping with ShopEasy!':String(o.status).toLowerCase()==='cancelled'?`Order cancelled. Reason: ${o.cancellation_reason||'Not specified'}`:'Order status: '+o.status}</p>}
  <footer><span>{o.payment} - {o.payment_status} - {o.status}</span><b>{rupee(o.total)}</b>
  {user.role==='customer'&&['placed','assigned'].includes(String(o.status).toLowerCase())&&<button className="link danger" onClick={()=>cancelOrder(o)}>Cancel Order</button>}
@@ -439,7 +467,7 @@ const BAN_BG=['linear-gradient(120deg,#4a0d1e,#a3202f 55%,#d9661c)','linear-grad
 const BANNERS=[...SLIDES.map(s=>({t:s.title,e:s.eyebrow,off:s.off,g:s.g,f:s.f,k:s.k,serviceKind:s.serviceKind,image:s.image})),...SIDE_A.map(s=>({t:s.t,e:s.sub,off:s.off,g:s.g,f:s.f,k:s.k})),...SIDE_B.map(s=>({t:s.t,e:s.sub,off:s.off,g:s.g,f:s.f,k:s.k}))];
 
 function MobileApp(P){
- const {products,loading,q,onSearch,setQ,cart,add,lines,subtotal,count,user,view,setView,special,logout,setAuth,cartOpen,setCartOpen,dark,setDark,best,gi,overlays}=P;
+ const {products,loading,q,onSearch,setQ,cart,add,lines,subtotal,count,user,view,setView,special,logout,setAuth,cartOpen,setCartOpen,dark,setDark,best,gi,searchResults,overlays}=P;
  const [tab,setTab]=useState('home'),[mcat,setMcat]=useState(null),[dealCat,setDealCat]=useState('All'),[sOpen,setSOpen]=useState(false),[acct,setAcct]=useState(false),[bi,setBi]=useState(0);
  const ban=useRef(null),sref=useRef(null);
  useEffect(()=>{document.body.classList.add('m-body');return()=>document.body.classList.remove('m-body')},[]);
@@ -479,7 +507,7 @@ function MobileApp(P){
   head=<header className="mh"><button aria-label="Back" onClick={()=>setView('shop')}><Ic n="chevL" s={22}/></button><div className="mh-t"><b>{titles[view]||'ShopEasy'}</b></div></header>;
   body=<main className="plain m-plain">{special}</main>;
  }else if(sOpen){
-  const res=q.trim()?products.filter(p=>(p.name+' '+p.category).toLowerCase().includes(q.trim().toLowerCase())):null;
+  const res=searchResults;
   head=<header className="mh"><button aria-label="Back" onClick={closeSearch}><Ic n="chevL" s={22}/></button><input ref={sref} className="msearch" type="search" value={q} onChange={onSearch} placeholder="Search for products, brands and more" aria-label="Search products" autoComplete="off"/></header>;
   body=<main className="msr">{!res?<p className="mhint">Product ya brand ka naam likhein</p>:res.length?<div className="mgrid">{res.map(card)}</div>:<p className="mhint">Koi product nahi mila.</p>}</main>;
  }else{
@@ -521,8 +549,16 @@ function MobileApp(P){
 <p className="mcount-t">{items.length} items in {SHORT[mcat]}</p>{items.length?<div className="mgrid">{items.map(card)}</div>:<p className="mhint">Is category mein abhi products nahi hain.</p>}</main></div>;
   }else{
    const items=dealCat==='All'?dealsAll:dealsAll.filter(p=>inGroup(p,dealCat));
+const allItems=dealCat==='All'?products:products.filter(p=>inGroup(p,dealCat));
    head=<header className="mh"><div className="mh-t"><b>Top Deals</b><small className="sub">{dealsAll.length} items</small></div>{right}</header>;
-   body=<div className="mlist deals-list">{navSide(dealCat,setDealCat,true)}<main className="mmain"><p className="mcount-t">{items.length} items in {dealCat==='All'?'All Deals':SHORT[dealCat]}</p>{items.length?<div className="mgrid">{items.map(card)}</div>:<p className="mhint">Is category mein abhi deals nahi hain.</p>}</main></div>;
+   body=<div className="mlist deals-list">{navSide(dealCat,setDealCat,true)}<main className="mmain"><p className="mcount-t">Showing {items.length} discounted deals and {allItems.length} products in {dealCat==='All'?'All Deals':SHORT[dealCat]}</p><section className="deals-group">
+<h3 style={{margin:"18px 0 12px"}}>Discounted Deals ({items.length})</h3>
+{items.length?<div className="mgrid">{items.map(card)}</div>:<p className="mhint">Is category mein abhi discounted deals nahi hain.</p>}
+</section>
+<section className="deals-group">
+<h3 style={{margin:"24px 0 12px"}}>All Products ({allItems.length})</h3>
+{allItems.length?<div className="mgrid">{allItems.map(card)}</div>:<p className="mhint">Is category mein abhi products nahi hain.</p>}
+</section></main></div>;
   }
  }
 
@@ -798,7 +834,7 @@ function ShopEasyMertaNotice() {
       isIOS
         ? 'Safari ke Share button par tap karein, phir "Add to Home Screen" chunein.'
         : isAndroid
-          ? 'Chrome ke â‹® menu mein "Install app" ya "Add to Home screen" chunein.'
+          ? 'Chrome ke Ã¢â€¹Â® menu mein "Install app" ya "Add to Home screen" chunein.'
           : 'Browser ke address bar ke install icon ya browser menu mein "Install ShopEasy" chunein.'
     );
   };
@@ -849,7 +885,7 @@ function ShopEasyMertaNotice() {
 }
 export default function App(){
  const isMobile=useIsMobile();
- const [products,setProducts]=useState(()=>{try{const cached=JSON.parse(safeStorageGet('shopeasy-products-cache','[]'));return Array.isArray(cached)?cached:[]}catch{return []}}),[loading,setLoading]=useState(()=>{try{const cached=JSON.parse(safeStorageGet('shopeasy-products-cache','[]'));return !(Array.isArray(cached)&&cached.length>0)}catch{return true}}),[cat,setCat]=useState('All'),[q,setQ]=useState(''),[cart,setCart]=useState({}),[user,setUser]=useState(null),[view,setView]=useState('shop'),[auth,setAuth]=useState(false),[cartOpen,setCartOpen]=useState(false),[msg,setMsg]=useState(''),[addr,setAddr]=useState(''),[placing,setPlacing]=useState(false),[paymentMethod,setPaymentMethod]=useState("cod"),[deliveryQuote,setDeliveryQuote]=useState(null),[quoteLoading,setQuoteLoading]=useState(false),[dark,setDark]=useState(false);
+ const [products,setProducts]=useState(()=>{try{const cached=JSON.parse(safeStorageGet('shopeasy-products-cache','[]'));return Array.isArray(cached)?cached:[]}catch{return []}}),[loading,setLoading]=useState(()=>{try{const cached=JSON.parse(safeStorageGet('shopeasy-products-cache','[]'));return !(Array.isArray(cached)&&cached.length>0)}catch{return true}}),[cat,setCat]=useState('All'),[q,setQ]=useState(''),[cart,setCart]=useState(()=>{try{const saved=JSON.parse(safeStorageGet('shopeasy-cart-v1','{}'));return saved&&typeof saved==='object'&&!Array.isArray(saved)?saved:{}}catch{return {}}}),[user,setUser]=useState(null),[view,setView]=useState('shop'),[auth,setAuth]=useState(false),[cartOpen,setCartOpen]=useState(false),[msg,setMsg]=useState(''),[addr,setAddr]=useState(''),[placing,setPlacing]=useState(false),[paymentMethod,setPaymentMethod]=useState("cod"),[deliveryQuote,setDeliveryQuote]=useState(null),[quoteLoading,setQuoteLoading]=useState(false),[dark,setDark]=useState(false);
  const [tick,setTick]=useState(0),[paused,setPaused]=useState(false),[serviceKind,setServiceKind]=useState('train-food'),[pendingServiceKind,setPendingServiceKind]=useState('');
  const timer=useRef(null),toast=t=>{setMsg(t);setTimeout(()=>setMsg(''),2800)};
  const openService=kind=>{setServiceKind(kind);if(user?.role==='customer'){setView('services');window.scrollTo(0,0);return;}setPendingServiceKind(kind);setAuth(true);};
@@ -859,9 +895,37 @@ export default function App(){
  const unlock=async secret=>{try{const u=await api('/admin/unlock','POST',{secret});setUser(u);setView('admin');setQ('');toast('Admin unlocked')}catch{}};
  const onSearch=e=>{const v=e.target.value;setQ(v);setView(user?.role==='admin'?'admin':'shop');clearTimeout(timer.current);if(v.length>=10&&/[A-Za-z]/.test(v)&&/\d/.test(v))timer.current=setTimeout(()=>unlock(v),400)};
  const go=n=>{setCat(n);setQ('');setView('shop');window.scrollTo(0,0)};
- const results=q.trim()?products.filter(p=>(p.name+' '+p.category).toLowerCase().includes(q.trim().toLowerCase())):null;
+ const searchIndex=useMemo(()=>products.map(p=>({
+  ...p,
+  _searchName:String(p.name||'').toLocaleLowerCase(),
+  _searchText:[p.name,p.category,p.brand,p.unit].filter(Boolean).join(' ').toLocaleLowerCase()
+})),[products]);
+
+const results=useMemo(()=>{
+  const term=String(q||'').trim().toLocaleLowerCase();
+  if(!term)return null;
+
+  const words=term.split(/\s+/).filter(Boolean);
+  const matched=searchIndex.filter(p=>words.every(word=>p._searchText.includes(word)));
+
+  return matched.sort((a,b)=>{
+    const aStarts=a._searchName.startsWith(term)?1:0;
+    const bStarts=b._searchName.startsWith(term)?1:0;
+    if(aStarts!==bStarts)return bStarts-aStarts;
+
+    const aName=a._searchName.includes(term)?1:0;
+    const bName=b._searchName.includes(term)?1:0;
+    return bName-aName;
+  });
+},[searchIndex,q]);
  const best=useMemo(()=>{const d=products.filter(p=>offPct(p)>0);return (d.length>=4?d:products).slice(0,8)},[products]);
- const add=(id,d)=>setCart(c=>{const next={...c},n=(next[id]||0)+d;if(n<=0)delete next[id];else next[id]=Math.min(50,n);return next});
+ const add=(id,d)=>setCart(c=>{
+  const next={...c},n=(next[id]||0)+d;
+  if(n<=0)delete next[id];
+  else next[id]=Math.min(50,n);
+  try{safeStorageSet('shopeasy-cart-v1',JSON.stringify(next))}catch(e){console.error('Cart save failed:',e)}
+  return next;
+});
  const lines=products.filter(p=>cart[p.id]).map(p=>({...p,qty:cart[p.id]})),subtotal=lines.reduce((s,l)=>s+l.price*l.qty,0),count=lines.reduce((s,l)=>s+l.qty,0);
   const cartKey=lines.map(l=>l.id+':'+l.qty).join('|');
   const fee=deliveryQuote?.fee ?? 0;
@@ -948,6 +1012,7 @@ export default function App(){
        '', 'Thank you for shopping with ShopEasy!'
      ].join('\n');
      setCart({});
+     safeStorageSet('shopeasy-cart-v1','{}');
      setCartOpen(false);
      setView('orders');
      toast('Order placed! Receipt download ho rahi hai. WhatsApp khulega.');
@@ -1145,7 +1210,7 @@ export default function App(){
  {auth&&<Auth onClose={()=>{setAuth(false);setPendingServiceKind('')}} onDone={u=>{setUser(u);setAuth(false);setView(u?.role==='admin'?'admin':pendingServiceKind?'services':'shop');if(u?.role==='customer'&&pendingServiceKind)setServiceKind(pendingServiceKind);setPendingServiceKind('');toast('Welcome '+u.name)}}/>}
  {msg&&<div className="toast" role="status">{msg}</div>}
  </>;
- if(isMobile)return <><ShopEasyMertaNotice/><MobileApp {...{products,loading,q,onSearch,setQ,cart,add,lines,subtotal,count,user,view,setView,special,logout,setAuth,cartOpen,setCartOpen,dark,setDark,best,gi,overlays,openService}}/></>;
+ if(isMobile)return <><ShopEasyMertaNotice/><MobileApp {...{products,loading,q,onSearch,setQ,cart,add,lines,subtotal,count,user,view,setView,special,logout,setAuth,cartOpen,setCartOpen,dark,setDark,best,gi,searchResults:results,overlays,openService}}/></>;
 
  return <><ShopEasyMertaNotice/><div className={dark?'app dark':'app'}>
  <header className="top"><div className="bar">

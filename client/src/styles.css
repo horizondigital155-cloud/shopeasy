@@ -3475,3 +3475,48 @@ body, .app {
     min-height: 42px;
   }
 }
+
+
+/* SHOPEASY TOP DEALS INDEPENDENT SCROLL FIX */
+@media (max-width: 768px) {
+
+  .m-app:has(.deals-list) {
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .m-app:has(.deals-list) > .deals-list {
+    display: grid;
+    grid-template-columns: 80px minmax(0, 1fr);
+    height: calc(100dvh - var(--mh) - var(--mn));
+    min-height: 0;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  .m-app:has(.deals-list) .mside {
+    height: 100%;
+    min-height: 0;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+  }
+
+  .m-app:has(.deals-list) .mmain {
+    height: 100%;
+    min-height: 0;
+    min-width: 0;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+  }
+
+  .m-app:has(.deals-list) .mnav {
+    flex-shrink: 0;
+  }
+}
